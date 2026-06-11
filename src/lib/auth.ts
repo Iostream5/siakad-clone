@@ -177,6 +177,10 @@ export async function requireAuthorizedUser(menuKey: string, allowedRoles?: User
 }
 
 export async function getUserByCredential(identifier: string, password: string) {
+  if (process.env.NODE_ENV === "production") {
+    return null;
+  }
+
   const normalized = identifier.trim().toLowerCase();
 
   return (

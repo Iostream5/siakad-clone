@@ -8,15 +8,18 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { PageTransition } from "@/components/ui/page-transition";
 import { useUIStore } from "@/hooks/use-ui-store";
+import type { NotificationPreviewData } from "@/lib/admin/notifications";
 import type { SessionUser, SidebarItem } from "@/types/domain";
 
 export function DashboardShell({
   user,
   items,
+  notificationPreview,
   children,
 }: {
   user: SessionUser;
   items: SidebarItem[];
+  notificationPreview: NotificationPreviewData;
   children: ReactNode;
 }) {
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
@@ -64,7 +67,7 @@ export function DashboardShell({
           } left-0`}
         >
           <div className="w-full px-4 md:px-8">
-            <Topbar user={user} onToggleSidebar={handleToggleSidebar} />
+            <Topbar user={user} onToggleSidebar={handleToggleSidebar} notificationPreview={notificationPreview} />
           </div>
         </header>
 

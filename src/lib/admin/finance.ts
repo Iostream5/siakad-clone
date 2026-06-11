@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "crypto";
+
 import { createAdminClient } from "@/supabase/admin";
 
 type Relation<T> = T | T[] | null | undefined;
@@ -746,6 +748,15 @@ type MidtransConfig = {
   isProduction: boolean;
 };
 
+type MidtransFinanceNotificationPayload = {
+  order_id?: unknown;
+  status_code?: unknown;
+  gross_amount?: unknown;
+  signature_key?: unknown;
+  transaction_status?: unknown;
+  fraud_status?: unknown;
+};
+
 const MIDTRANS_SANDBOX_SNAP_URL = "https://app.sandbox.midtrans.com/snap/v1/transactions";
 const MIDTRANS_PRODUCTION_SNAP_URL = "https://app.midtrans.com/snap/v1/transactions";
 
@@ -916,7 +927,11 @@ export async function requestFinancePaymentGateway(values: {
   };
 }
 
-export async function handleMidtransFinanceNotification(payload: any) {
+function normalizeMidtransValue(value: unknown) {
+  return typeof value === "string" || typeof value === "number" ? `${value}`.trim() : "";
+}
+
+export async function handleMidtransFinanceNotification(payload: MidtransFinanceNotificationPayload) {
   const supabase = createAdminClient();
   if (!supabase) throw new Error("Supabase admin client not available");
 
@@ -925,19 +940,22 @@ export async function handleMidtransFinanceNotification(payload: any) {
     throw new Error("MIDTRANS_SERVER_KEY belum dikonfigurasi.");
   }
 
-  const orderId = `${payload.order_id || ""}`;
-  const statusCode = `${payload.status_code || ""}`;
-  const grossAmount = `${payload.gross_amount || ""}`;
-  const signatureKey = `${payload.signature_key || ""}`;
+  const orderId = normalizeMidtransValue(payload.order_id);
+  const statusCode = normalizeMidtransValue(payload.status_code);
+  const grossAmount = normalizeMidtransValue(payload.gross_amount);
+  const signatureKey = normalizeMidtransValue(payload.signature_key);
 
-  const crypto = require("crypto");
-  const expected = crypto.createHash("sha512").update(`${orderId}${statusCode}${grossAmount}${midtrans.serverKey}`).digest("hex");
+  if (!orderId || !statusCode || !grossAmount || !signatureKey) {
+    throw new Error("Payload notifikasi Midtrans tidak lengkap.");
+  }
+
+  const expected = createHash("sha512").update(`${orderId}${statusCode}${grossAmount}${midtrans.serverKey}`).digest("hex");
   if (expected !== signatureKey) {
     throw new Error("Signature Midtrans tidak valid.");
   }
 
-  const transactionStatus = `${payload.transaction_status || ""}`;
-  const fraudStatus = `${payload.fraud_status || ""}`;
+  const transactionStatus = normalizeMidtransValue(payload.transaction_status);
+  const fraudStatus = normalizeMidtransValue(payload.fraud_status);
 
   let mappedStatus: "Menunggu" | "Terverifikasi" | "Ditolak" | "Kadaluarsa" | "Gagal" | null = null;
   if (transactionStatus === "capture") {

@@ -77,7 +77,7 @@ Area file utama:
 - Payment gateway UI: `src/modules/payment-gateway`
 - Webhook routes: `src/app/api/payment-gateway/midtrans/...`
 - Supabase clients: `src/supabase/...`
-- Migrations: `migrations/`
+- Migrations: `supabase/migrations/`
 
 Aturan teknis:
 

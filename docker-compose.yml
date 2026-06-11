@@ -1,45 +1,17 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: siakad-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-siakad}
-      POSTGRES_USER: ${POSTGRES_USER:-siakad}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-siakad_password}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - siakad-postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-siakad} -d ${POSTGRES_DB:-siakad}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    profiles:
-      - app
     container_name: siakad-web
     restart: unless-stopped
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://siakad:siakad_password@postgres:5432/siakad}
-      DIRECT_URL: ${DIRECT_URL:-postgresql://siakad:siakad_password@postgres:5432/siakad}
-      DATABASE_SSL: ${DATABASE_SSL:-false}
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
       SESSION_SECRET: ${SESSION_SECRET:-}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       HOSTNAME: 0.0.0.0
       PORT: 3000
     ports:
       - "${APP_PORT:-3000}:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-volumes:
-  siakad-postgres-data:

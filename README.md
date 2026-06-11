@@ -9,7 +9,7 @@ SIAKAD universitas berbasis Next.js App Router + TypeScript + Supabase. Project 
 - Dashboard per role untuk `Admin`, `Prodi`, `Dosen`, `Mahasiswa`, `Staff`, `Keuangan`, dan `Pimpinan`.
 - Modul baseline untuk master data, PMB, registrasi semester, KRS, nilai, keuangan, dan laporan.
 - Integrasi utilitas Supabase client/server yang siap dihubungkan ke env.
-- Migration SQL lengkap dan `seed.sql`.
+- Migration SQL lengkap di `supabase/migrations/` dan seed di `supabase/seed.sql`.
 - Konfigurasi `shadcn/ui` (`components.json`) dan komponen UI dasar.
 
 ## Struktur Project
@@ -24,9 +24,9 @@ src/
   types/           Tipe domain
   actions/         Server actions
   supabase/        Browser/server Supabase client
-migrations/
-  001_init.sql     Schema utama
-seed.sql           Seed data awal
+supabase/
+  migrations/      Schema migration Supabase CLI
+  seed.sql         Seed data awal
 ```
 
 ## Setup Lokal
@@ -67,10 +67,27 @@ Auth demo ini disimpan lewat cookie lokal agar aplikasi tetap bisa dijalankan ta
 
 ## Setup Database Supabase
 
-1. Jalankan `migrations/001_init.sql` di SQL Editor Supabase.
-2. Jalankan `seed.sql`.
-3. Buat user auth dan isi metadata `role` serta `full_name` bila ingin memakai trigger profile otomatis.
-4. Simpan file upload pembayaran pada bucket storage pilihan Anda, lalu sambungkan field `bukti_url`.
+1. Install dan login Supabase CLI.
+2. Link project Supabase bila belum:
+
+```bash
+supabase link
+```
+
+3. Jalankan migration dari folder `supabase/migrations/`:
+
+```bash
+npm run db:migrate
+```
+
+4. Untuk reset database lokal Supabase sekaligus seed dari `supabase/seed.sql`:
+
+```bash
+npm run db:reset
+```
+
+5. Buat user auth dan isi metadata `role` serta `full_name` bila ingin memakai trigger profile otomatis.
+6. Simpan file upload pembayaran pada bucket storage pilihan Anda, lalu sambungkan field `bukti_url`.
 
 Contoh variabel Supabase bila tetap memakai hosted Supabase:
 
@@ -78,9 +95,7 @@ Contoh variabel Supabase bila tetap memakai hosted Supabase:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY=isi_dari_supabase_dashboard`
 - `SUPABASE_SERVICE_ROLE_KEY=isi_dari_supabase_dashboard`
 
-## PostgreSQL Docker
-
-Project ini bisa disiapkan untuk PostgreSQL lokal/Docker. Supabase yang dipakai saat ini juga berbasis PostgreSQL, tetapi aplikasi masih memakai Supabase API/Auth untuk sebagian besar akses data. Artinya, container PostgreSQL lokal sudah bisa dipakai untuk migrasi SQL dan pengembangan data layer, sementara perpindahan penuh dari Supabase API ke query PostgreSQL langsung perlu dilakukan bertahap.
+## Docker App
 
 1. Salin contoh env Docker:
 
@@ -88,39 +103,21 @@ Project ini bisa disiapkan untuk PostgreSQL lokal/Docker. Supabase yang dipakai 
 copy docker.env.example docker.env
 ```
 
-2. Jalankan PostgreSQL lokal:
+2. Isi env Supabase di `docker.env`.
+
+3. Build image aplikasi:
 
 ```bash
-docker compose --env-file docker.env up -d postgres
+docker compose --env-file docker.env build app
 ```
 
-3. Jalankan migrasi SQL ke PostgreSQL lokal:
+4. Jalankan aplikasi container:
 
 ```bash
-cmd /c npm run db:migrate
+docker compose --env-file docker.env up -d
 ```
 
-Pastikan `.env.local` atau environment terminal berisi:
-
-```env
-DATABASE_URL=postgresql://siakad:siakad_password@localhost:5432/siakad
-DIRECT_URL=postgresql://siakad:siakad_password@localhost:5432/siakad
-DATABASE_SSL=false
-```
-
-4. Build image aplikasi:
-
-```bash
-docker compose --env-file docker.env --profile app build app
-```
-
-5. Jalankan aplikasi container:
-
-```bash
-docker compose --env-file docker.env --profile app up -d
-```
-
-Catatan: untuk deployment self-contained tanpa Supabase, modul data perlu dimigrasi dari `src/supabase/*` ke query PostgreSQL langsung, misalnya lewat Drizzle atau `postgres`. File Docker ini menyiapkan infrastrukturnya dulu.
+Catatan: container hanya menjalankan Next.js. Database, Auth, dan Storage tetap melalui Supabase.
 
 ## Fitur Jalan vs Stub
 
