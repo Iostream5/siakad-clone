@@ -56,7 +56,7 @@ Tidak masuk scope:
 - Proxy: `src/proxy.ts`
 - Auth: `src/lib/auth.ts`, `src/actions/auth.ts`
 - Supabase clients: `src/supabase/client.ts`, `src/supabase/server.ts`, `src/supabase/admin.ts`
-- Migrations: `migrations/`
+- Migrations: `supabase/migrations/`
 - Package scripts: `package.json`
 - Docker files: `Dockerfile`, `docker-compose.yml`, `docker.env.example`
 - Payment routes: `src/app/api/payment-gateway/midtrans/...`

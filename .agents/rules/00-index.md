@@ -43,7 +43,7 @@ Untuk task baru, AI harus internalisasi urutan berikut:
 
 ## Quick Reference — Hal yang Paling Sering Dilupakan
 
-1. **`proxy.ts`** bukan `middleware.ts` — route protection Next.js 16
+1. **`src/proxy.ts`** bukan `middleware.ts` — route protection Next.js 16
 2. **Supabase Auth** bukan Better Auth/NextAuth
 3. **SQL migrations** bukan Prisma schema
 4. **`requireAuthorizedUser`** di setiap Server Action mutasi

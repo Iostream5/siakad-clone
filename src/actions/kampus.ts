@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 
 import { bulkDeleteKampus, bulkHardDeleteKampus, bulkRestoreKampus, deleteKampus, hardDeleteKampus, importKampusFromCsv, restoreKampus, saveKampus } from "@/lib/admin/kampus";
 import { requireAuthorizedUser } from "@/lib/auth";
-import { withToastParams } from "@/lib/toast-query";
 import { kampusSchema } from "@/lib/validators";
 
 function getErrorMessage(error: unknown) {

@@ -1,9 +1,7 @@
-import type { NextRequest } from "next/server";
-
 import { getUserAccessContext } from "@/lib/admin/access-control";
 import { getResolvedSessionUser } from "@/lib/auth";
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   const user = await getResolvedSessionUser();
 
   if (!user) {

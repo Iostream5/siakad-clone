@@ -54,7 +54,7 @@ Tidak masuk scope:
 - Finance modules: `src/modules/finance`
 - PMB modules: `src/modules/pmb`
 - EDOM tables jika tersedia: `edom_questions`, `edom_responses`, `edom_response_answers`
-- Migrations: `migrations/`
+- Migrations: `supabase/migrations/`
 
 ## Phase 5.1 - Audit Schema Notifikasi
 

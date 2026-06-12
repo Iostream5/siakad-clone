@@ -265,7 +265,7 @@ ON CONFLICT (id) DO UPDATE SET
 DROP TABLE IF EXISTS public._backup_nama_tabel_YYYYMMDD;
 ```
 
-STEP 3: Catat rollback di PROGRESS.md.
+STEP 3: Catat rollback di final response atau dokumen progress jika repo menyediakannya.
 
 ```markdown
 ### [Tanggal] — ROLLBACK Migration 023
@@ -286,7 +286,7 @@ STEP 3: Catat rollback di PROGRESS.md.
 - [ ] Rollback script tersedia untuk migration signifikan
 - [ ] Backup tersedia untuk migration yang mengubah data existing
 - [ ] Rollback diverifikasi berjalan di dev sebelum dibutuhkan di production
-- [ ] Rollback terdokumentasi di PROGRESS.md jika dijalankan
+- [ ] Rollback terdokumentasi di final response atau dokumen progress jika dijalankan
 
 ---
 
@@ -312,7 +312,7 @@ Jika ada perbedaan antara schema lokal dan Supabase live (seperti tabel `edom_*`
 4. Pastikan file patch idempoten (IF NOT EXISTS)
 ```
 
-STEP 3: Update `PROGRESS.md` setiap kali migration baru diapply.
+STEP 3: Catat setiap migration baru yang diapply di final response atau dokumen progress jika repo menyediakannya.
 
 ```markdown
 ### [Tanggal] — Migration 023: Fitur Baru
@@ -333,7 +333,7 @@ STEP 3: Update `PROGRESS.md` setiap kali migration baru diapply.
 □ Schema lokal dan Supabase dev sinkron
 □ Tidak ada perubahan schema yang dilakukan langsung di dashboard tanpa file migration
 □ Rollback script tersedia untuk migration berisiko
-□ PROGRESS.md diperbarui setelah apply
+□ Catatan migration diperbarui setelah apply
 □ build tetap hijau setelah migration
 ```
 

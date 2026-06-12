@@ -360,7 +360,7 @@ Setiap Server Action wajib:
 ### Anti Bypass
 
 - Jangan percaya `user_id` atau `role` yang dikirim dari client — selalu resolve dari session server
-- Jangan skip auth check dengan alasan "sudah ada di proxy.ts"
+- Jangan skip auth check dengan alasan "sudah ada di src/proxy.ts"
 - Jangan return data tanpa filter ownership (misal: return semua nilai, bukan nilai user yang login)
 
 ---

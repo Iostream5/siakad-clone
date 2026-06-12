@@ -234,9 +234,8 @@ export function KelasManager({ items, totalItems, totalPages, currentPage, query
   useActionToast(bulkRestoreState, "Kelas dipulihkan");
   useActionToast(bulkHardDeleteState, "Kelas dihapus permanen");
 
-  useEffect(() => {
-    setSelectedIds([]);
-  }, [mode, items]);
+  const visibleItemIds = new Set(items.map((item) => item.id));
+  const visibleSelectedIds = selectedIds.filter((id) => visibleItemIds.has(id));
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -253,11 +252,17 @@ export function KelasManager({ items, totalItems, totalPages, currentPage, query
   }
 
   function toggleAll() {
-    if (selectedIds.length === items.length) {
-      setSelectedIds([]);
+    const itemIds = items.map((item) => item.id);
+
+    if (visibleSelectedIds.length === itemIds.length) {
+      setSelectedIds((current) => current.filter((id) => !visibleItemIds.has(id)));
       return;
     }
-    setSelectedIds(items.map((item) => item.id));
+
+    setSelectedIds((current) => [
+      ...current.filter((id) => !visibleItemIds.has(id)),
+      ...itemIds,
+    ]);
   }
 
   return (
@@ -284,24 +289,24 @@ export function KelasManager({ items, totalItems, totalPages, currentPage, query
           </div>
           <div className="flex gap-2"><Button type="submit">Cari</Button><Link href={pathname}><Button type="button" variant="secondary">Reset</Button></Link></div>
         </form>
-        {selectedIds.length > 0 && (
+        {visibleSelectedIds.length > 0 && (
           <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 md:flex-row md:items-center md:justify-between">
-            <p className="text-sm font-medium text-cyan-900">{selectedIds.length} data dipilih</p>
+            <p className="text-sm font-medium text-cyan-900">{visibleSelectedIds.length} data dipilih</p>
             <div className="flex flex-wrap gap-2">
               {mode === "trash" ? (
                 <>
-                  <form action={bulkRestoreAction}>{selectedIds.map((id) => <input key={`r-${id}`} type="hidden" name="ids" value={id} />)}<Button type="submit" variant="secondary" size="sm"><RotateCcw className="mr-2 h-4 w-4" />Pulihkan</Button></form>
-                  <form action={bulkHardDeleteAction}>{selectedIds.map((id) => <input key={`h-${id}`} type="hidden" name="ids" value={id} />)}<Button type="submit" size="sm" className="bg-rose-600 text-white hover:bg-rose-700">Hapus Permanen</Button></form>
+                  <form action={bulkRestoreAction}>{visibleSelectedIds.map((id) => <input key={`r-${id}`} type="hidden" name="ids" value={id} />)}<Button type="submit" variant="secondary" size="sm"><RotateCcw className="mr-2 h-4 w-4" />Pulihkan</Button></form>
+                  <form action={bulkHardDeleteAction}>{visibleSelectedIds.map((id) => <input key={`h-${id}`} type="hidden" name="ids" value={id} />)}<Button type="submit" size="sm" className="bg-rose-600 text-white hover:bg-rose-700">Hapus Permanen</Button></form>
                 </>
               ) : (
-                <form action={bulkDeleteAction}>{selectedIds.map((id) => <input key={`d-${id}`} type="hidden" name="ids" value={id} />)}<Button type="submit" variant="secondary" size="sm" className="text-rose-700">Pindahkan ke Sampah</Button></form>
+                <form action={bulkDeleteAction}>{visibleSelectedIds.map((id) => <input key={`d-${id}`} type="hidden" name="ids" value={id} />)}<Button type="submit" variant="secondary" size="sm" className="text-rose-700">Pindahkan ke Sampah</Button></form>
               )}
             </div>
           </div>
         )}
         <div className="mt-5 overflow-x-auto">
           <Table>
-            <THead><TR><TH className="w-12 px-3"><Checkbox checked={items.length > 0 && selectedIds.length === items.length} onCheckedChange={() => toggleAll()} /></TH><TH>Kode</TH><TH>Kelas</TH><TH>Prodi</TH><TH>Detail</TH><TH>Status</TH><TH className="w-[160px]">Aksi</TH></TR></THead>
+            <THead><TR><TH className="w-12 px-3"><Checkbox checked={items.length > 0 && visibleSelectedIds.length === items.length} onCheckedChange={() => toggleAll()} /></TH><TH>Kode</TH><TH>Kelas</TH><TH>Prodi</TH><TH>Detail</TH><TH>Status</TH><TH className="w-[160px]">Aksi</TH></TR></THead>
             <TBody>
               {items.length === 0 ? <TR><TD colSpan={7} className="py-10 text-center text-slate-500">Data tidak ditemukan</TD></TR> : items.map((item) => (
                 <TR key={item.id}>

@@ -35,7 +35,7 @@ Aturan scope:
 - Migration baru → test query yang menyentuh tabel yang baru dimigrasi
 - Perubahan auth/permission → test semua role yang terpengaruh
 
-STEP 3: Catat hasil test di CURRENT-TASK.md.
+STEP 3: Catat hasil test di final response atau dokumen task jika repo menyediakannya.
 
 ```markdown
 ## Hasil Smoke Test
@@ -56,7 +56,7 @@ STEP 3: Catat hasil test di CURRENT-TASK.md.
 
 - [ ] Jenis test yang diperlukan sudah ditentukan
 - [ ] Scope test sudah disesuaikan dengan perubahan yang dilakukan
-- [ ] Hasil test dicatat di CURRENT-TASK.md
+- [ ] Hasil test dicatat di final response atau dokumen task jika repo menyediakannya
 
 ---
 
@@ -300,7 +300,7 @@ STEP 3: Test alur KRS (Phase 3+).
 □ Audit log tercatat untuk semua mutasi yang ditest
 □ Role isolation diverifikasi: tidak ada data bocor antar user
 □ Alur kritis yang relevan dengan phase aktif sudah ditest
-□ Hasil test dicatat di CURRENT-TASK.md
+□ Hasil test dicatat di final response atau dokumen task jika repo menyediakannya
 □ Known issues (jika ada) didokumentasikan
 ```
 
@@ -310,7 +310,7 @@ STEP 3: Test alur KRS (Phase 3+).
 
 Setelah SOP Testing ini dijalankan:
 
-1. **Bukti test tersedia** — hasil smoke test tercatat di CURRENT-TASK.md dengan status per test case.
+1. **Bukti test tersedia** - hasil smoke test tercatat di final response atau dokumen task jika repo menyediakannya.
 2. **Regresi terdeteksi dini** — fitur lama yang rusak akibat perubahan baru teridentifikasi sebelum merge.
 3. **Data isolation terverifikasi** — setiap role hanya melihat data yang menjadi haknya.
 4. **Alur kritis berjalan** — PMB, pembayaran, KRS, dan alur bisnis utama phase aktif sudah diverifikasi end-to-end.

@@ -15,7 +15,7 @@ Prinsip utama:
 3. Validasi input sebelum menyentuh database.
 4. Mutasi penting wajib lewat auth, permission, audit log, dan cache revalidation.
 5. Jangan commit secret, env lokal, token, atau log kredensial.
-6. Cek env sebelum MCP: DEV pakai `siakad-dev`, production pakai `siakad`.
+6. Cek env sebelum MCP: DEV pakai `siakad_dev`, production pakai `siakad`.
 
 ---
 
@@ -26,7 +26,7 @@ Migration wajib idempoten, aman diulang, dan mengikuti pola Supabase/Postgres. N
 ### Template tabel baru
 
 ```sql
--- supabase/migrations/NNN_nama_fitur.sql
+-- supabase/migrations/<nomor>_nama_fitur.sql
 
 create table if not exists public.nama_tabel (
   id uuid primary key default gen_random_uuid(),

@@ -60,7 +60,7 @@ FCM_SERVER_KEY=
 # .env.local di git history
 git add .env.local
 # atau
-NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=eyJ...  # service role sebagai NEXT_PUBLIC_!
+NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=
 ```
 
 Jika secret pernah masuk git: **rotasi segera** via Supabase dashboard dan Vercel env.

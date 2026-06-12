@@ -15,7 +15,6 @@ import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { roles } from "@/lib/constants";
 import { useActionToast } from "@/lib/use-action-toast";
 import type { MenuRow } from "@/lib/admin/menus";
-import type { UserRole } from "@/types/domain";
 
 const initialState = { success: false, message: null };
 

@@ -53,7 +53,7 @@ Stack wajib:
 - Supabase Auth.
 - Supabase PostgreSQL.
 - Supabase JS Client.
-- SQL migrations di `migrations/`.
+- SQL migrations di `supabase/migrations/`.
 - TypeScript strict.
 - Tailwind CSS v4.
 - Shadcn-style UI dan Radix.

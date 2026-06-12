@@ -11,7 +11,7 @@ Memastikan AI selalu menghasilkan query, migration, dan operasi database yang ko
 
 ## 1. Gambaran Umum
 
-Database utama adalah **Supabase PostgreSQL**. Schema dikelola via file SQL di folder `/migrations`. Tidak ada Prisma schema. Tidak ada SQLite.
+Database utama adalah **Supabase PostgreSQL**. Schema dikelola via file SQL di folder `supabase/migrations/`. Tidak ada Prisma schema. Tidak ada SQLite.
 
 ### Klien Supabase
 
@@ -103,7 +103,7 @@ CREATE TABLE namatabel (
 ✅ BENAR
 ```bash
 # Berurutan, bernomor urut, deskriptif
-migrations/
+supabase/migrations/
   001_init.sql
   002_user_menu_permissions.sql
   023_nama_fitur_baru.sql  # selalu increment
@@ -112,7 +112,7 @@ migrations/
 ❌ SALAH
 ```bash
 # Jangan buat migration tanpa nomor urut
-migrations/
+supabase/migrations/
   new_feature.sql
   fix.sql
 ```
@@ -184,7 +184,7 @@ await supabase.from('users').select('*')  // bisa dapat data yang sudah dihapus
 
 ```text
 Identifikasi kebutuhan schema baru
-  → Buat file baru: migrations/NNN_nama_fitur.sql
+  → Buat file baru: supabase/migrations/<nomor>_nama_fitur.sql
     → Tulis SQL dengan:
        - CREATE TABLE IF NOT EXISTS
        - ALTER TABLE ADD COLUMN IF NOT EXISTS
@@ -281,7 +281,7 @@ CREATE TABLE public.mahasiswa (
 
 Sebelum menulis query atau migration, verifikasi:
 
-- [ ] Apakah tabel sudah ada di `/migrations`?
+- [ ] Apakah tabel sudah ada di `supabase/migrations/`?
 - [ ] Apakah kolom `id`, `created_at`, `updated_at`, `deleted_at` sudah ada?
 - [ ] Apakah trigger `set_updated_at` sudah dipasang?
 - [ ] Apakah RLS sudah diaktifkan untuk tabel sensitif?
@@ -297,7 +297,7 @@ Sebelum menulis query atau migration, verifikasi:
 ## 8. Ringkasan
 
 - Database: **Supabase PostgreSQL** — bukan SQLite, bukan Prisma
-- Schema: **SQL files di `/migrations`** bernomor urut
+- Schema: **SQL files di `supabase/migrations/`** bernomor urut
 - Kolom wajib: `id (UUID)`, `created_at`, `updated_at`, `deleted_at`
 - Trigger: **`set_updated_at`** wajib di setiap tabel baru
 - Soft delete: **`deleted_at TIMESTAMPTZ NULL`** — bukan `is_deleted`

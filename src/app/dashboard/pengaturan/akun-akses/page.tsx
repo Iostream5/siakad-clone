@@ -7,7 +7,6 @@ import { getAccountAccessPageData } from "@/lib/admin/access-control";
 import { menuDefinitions } from "@/lib/access-control";
 import { requireAuthorizedUser } from "@/lib/auth";
 import { roles, sidebarItems } from "@/lib/constants";
-import { RolePanel } from "@/modules/shared/role-panel";
 
 type AccountAccessPageProps = {
   searchParams?: Promise<{
@@ -17,7 +16,7 @@ type AccountAccessPageProps = {
 };
 
 export default async function AccountAccessPage({ searchParams }: AccountAccessPageProps) {
-  const user = await requireAuthorizedUser("pengaturan.akun-akses", ["Admin"]);
+  await requireAuthorizedUser("pengaturan.akun-akses", ["Admin"]);
   const params = await searchParams;
   const selectedUserId = params?.user;
   const selectedRoleParam = params?.role;

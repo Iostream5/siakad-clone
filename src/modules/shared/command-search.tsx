@@ -3,19 +3,14 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-  Calculator,
-  Calendar,
   CreditCard,
   LayoutDashboard,
   Settings,
-  Smile,
   User,
-  Search,
   BookOpen,
   School,
   Landmark,
   ShieldCheck,
-  Bell,
   Wrench,
   Database,
   History,
@@ -48,6 +43,20 @@ export function CommandSearch({
   const [results, setResults] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
+  const resetSearch = React.useCallback(() => {
+    setQuery("");
+    setResults([]);
+    setIsLoading(false);
+  }, []);
+
+  const handleQueryChange = React.useCallback((value: string) => {
+    setQuery(value);
+    if (!value || value.length < 2) {
+      setResults([]);
+      setIsLoading(false);
+    }
+  }, []);
+
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -62,41 +71,42 @@ export function CommandSearch({
 
   // Dynamic Search Logic
   React.useEffect(() => {
-    if (!query || query.length < 2) {
-      setResults([]);
-      return;
-    }
+    if (!query || query.length < 2) return;
 
+    let cancelled = false;
     const timer = setTimeout(async () => {
       setIsLoading(true);
       try {
         const data = await searchMahasiswaAction(query);
-        setResults(data);
+        if (!cancelled) setResults(data);
       } catch (e) {
         console.error(e);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }, 300);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [query]);
 
   const runCommand = React.useCallback((command: () => void) => {
     setOpen(false);
-    setQuery("");
+    resetSearch();
     command();
-  }, [setOpen]);
+  }, [resetSearch, setOpen]);
 
   return (
     <CommandDialog open={open} onOpenChange={(o) => {
       setOpen(o);
-      if (!o) setQuery("");
+      if (!o) resetSearch();
     }}>
       <CommandInput 
         placeholder="Ketik perintah atau cari mahasiswa..." 
         value={query}
-        onValueChange={setQuery}
+        onValueChange={handleQueryChange}
       />
       <CommandList className="max-h-[450px]">
         {isLoading && (

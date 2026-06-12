@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Calendar, Pencil, Plus, Search, Trash2, X, RotateCcw, Save } from "lucide-react";
+import { Calendar, Pencil, Search, Trash2, X, RotateCcw, Save } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { deleteAcademicYearAction, saveAcademicYearAction } from "@/actions/academic-years";

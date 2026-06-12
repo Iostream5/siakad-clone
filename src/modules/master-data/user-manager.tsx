@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Pencil, Plus, Search, Trash2, X, Users } from "lucide-react";
+import { Pencil, Search, Trash2, X, Users } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { deleteUserAction, updateUserAction } from "@/actions/users";

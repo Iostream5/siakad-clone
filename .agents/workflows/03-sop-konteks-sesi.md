@@ -19,10 +19,8 @@ AI Agent tidak punya memori antar sesi. SOP ini membuat sesi baru bisa cepat pah
    Status implementasi, gap, dan risiko saat ini.
 3. docs/tahapan/TAHAPAN-PHASE-PENGERJAAN.md
    Phase aktif dan urutan task.
-4. .agent/progress/PROGRESS.md
-   Log progress terakhir, jika ada.
-5. .agent/progress/CURRENT-TASK.md
-   Task berjalan, jika ada.
+4. .agents/workflows/
+   SOP kerja agent yang berlaku untuk sesi ini.
 ```
 
 2. Identifikasi posisi kerja:
@@ -52,24 +50,13 @@ Jika salah satu merah, prioritas pertama adalah memperbaikinya. Jangan tambah fi
 
 ---
 
-## FASE 2: Progress Log dan Current Task
+## FASE 2: Catatan Sesi dan Current Task
 
-Agent wajib menjaga folder:
+Repo ini tidak mewajibkan folder progress khusus. Jangan membuat atau mencari folder progress legacy. Jika perlu mencatat status lintas sesi, gunakan ringkasan sesi/final response atau dokumen progress yang memang sudah disediakan repo.
 
-```text
-.agent/progress/
-```
+### Catatan Progress Opsional
 
-Isi minimal:
-
-```text
-.agent/progress/PROGRESS.md
-.agent/progress/CURRENT-TASK.md
-```
-
-### PROGRESS.md
-
-File ini adalah log kumulatif. Tambahkan entry terbaru di atas setiap kali sub-task selesai.
+Jika repo nanti menyediakan dokumen progress eksplisit, catat log kumulatif dengan format ringkas berikut. Jika tidak ada, tulis ringkasan ini di final response.
 
 Format ringkas:
 
@@ -110,9 +97,9 @@ Phase [N] — [Nama Phase]
 **Catatan:** Soft delete, restore, dan hard delete sudah berjalan. Import/export Excel masuk task berikutnya.
 ```
 
-### CURRENT-TASK.md
+### Catatan Task Aktif Opsional
 
-File ini mencatat task yang sedang aktif. Reset saat task baru dimulai, update saat ada progress, blocker, atau gate baru.
+Jika repo nanti menyediakan dokumen task aktif eksplisit, catat task berjalan dengan format ringkas berikut. Jika tidak ada, tulis status terbaru di final response.
 
 Format ringkas:
 
@@ -158,9 +145,8 @@ Pola akan direplikasi untuk Fakultas, Program Studi, Ruangan, Kelas, Tahun Akade
 
 ### Checklist
 
-- [ ] Folder `.agent/progress/` ada.
-- [ ] `PROGRESS.md` diperbarui saat task selesai.
-- [ ] `CURRENT-TASK.md` mencerminkan status nyata.
+- [ ] Catatan status terbaru tersedia di final response atau dokumen progress yang memang ada.
+- [ ] Catatan task aktif mencerminkan status nyata jika dokumen task tersedia.
 - [ ] Entry mencatat file, migration, gate teknis, dan catatan penting.
 
 ---
@@ -197,14 +183,14 @@ Task baru boleh dimulai hanya jika task sebelumnya memenuhi ini:
 - npm run lint hijau, tidak ada error baru.
 - npm run build hijau.
 - Smoke test manual lolos untuk route terdampak.
-- PROGRESS.md sudah diperbarui.
+- Status task dicatat di final response atau dokumen progress yang memang ada.
 ```
 
 Jika belum, lanjutkan task yang sama. Jangan pindah cuma karena bosan.
 
 ### Format blocker
 
-Jika task tertahan, tulis jelas di `CURRENT-TASK.md`:
+Jika task tertahan, tulis jelas di final response atau dokumen task yang memang ada:
 
 ```markdown
 ## Blocker
@@ -291,7 +277,7 @@ Di akhir phase, tulis gap sebelum lanjut:
 
 ### Saat context hampir habis
 
-Update `CURRENT-TASK.md` sebelum sesi berakhir:
+Sebelum sesi berakhir, catat status terakhir di final response atau dokumen task yang memang ada:
 
 ```markdown
 ## Status Terakhir Saat Sesi Terpotong
@@ -321,7 +307,7 @@ Update `CURRENT-TASK.md` sebelum sesi berakhir:
 
 ### Saat sesi berikutnya mulai
 
-1. Baca `CURRENT-TASK.md`.
+1. Baca ringkasan sesi terakhir atau dokumen task yang memang ada.
 2. Baca file yang sudah dibuat atau dimodifikasi.
 3. Lanjutkan dari titik terakhir.
 4. Jalankan gate teknis yang relevan.
@@ -341,8 +327,8 @@ Update `CURRENT-TASK.md` sebelum sesi berakhir:
 Sebelum sesi selesai, lakukan review kecil:
 
 ```text
-- PROGRESS.md diperbarui untuk pekerjaan yang selesai.
-- CURRENT-TASK.md berisi status terbaru.
+- Ringkasan pekerjaan selesai tersedia di final response atau dokumen progress yang memang ada.
+- Status task terbaru tersedia di final response atau dokumen task yang memang ada.
 - Gate teknis terakhir dicatat.
 - Tidak ada kode setengah jadi tanpa catatan.
 - Sesi berikutnya tahu harus lanjut dari mana.
@@ -357,7 +343,7 @@ Sebelum sesi selesai, lakukan review kecil:
 
 Setelah SOP ini dipakai:
 
-1. File progress selalu ada dan akurat.
+1. Catatan progress selalu tersedia di final response atau dokumen progress yang memang ada.
 2. Sesi baru cepat paham posisi pengerjaan.
 3. Task selesai tidak dikerjakan ulang dari nol.
 4. Urutan phase tetap ketat.

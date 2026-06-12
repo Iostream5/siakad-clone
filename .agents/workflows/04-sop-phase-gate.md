@@ -35,8 +35,8 @@ git log --all -- .env.local
 # Pastikan tidak ada secret di tracked files
 git ls-files | grep -i env
 
-# Pastikan proxy.ts ada (bukan middleware.ts)
-ls proxy.ts
+# Pastikan src/proxy.ts ada (bukan middleware.ts)
+Test-Path src/proxy.ts
 ```
 
 ### Checklist Gate Phase 0
@@ -44,7 +44,7 @@ ls proxy.ts
 ```
 □ .env.local tidak di-commit dan tidak ada di git history
 □ .env.example ada dan lengkap tanpa nilai secret
-□ proxy.ts ada di root project (bukan middleware.ts)
+□ src/proxy.ts ada di `src/` (bukan middleware.ts)
 □ Demo auth tidak aktif saat NODE_ENV=production
 □ SUPABASE_SERVICE_ROLE_KEY tidak ada sebagai NEXT_PUBLIC_*
 □ Semua Server Action mutasi yang sudah ada punya authorization check
@@ -102,7 +102,7 @@ SELECT count(*) FROM public.kampus WHERE deleted_at IS NULL;
 
 ```
 □ Admin login via Supabase Auth berjalan
-□ Session dan route protection stabil (proxy.ts)
+□ Session dan route protection stabil (src/proxy.ts)
 □ Sidebar dirender dari database (tabel menus)
 □ CRUD Users: create, update, soft delete, restore, hard delete ✓
 □ CRUD Roles & Permissions ✓
@@ -364,5 +364,5 @@ Setelah setiap gate check selesai, agent menghasilkan:
 1. **Laporan gate check** — status setiap item checklist (✅ hijau / ❌ merah / ⚠️ partial).
 2. **Daftar gap** — item yang belum terpenuhi beserta estimasi effort untuk menyelesaikannya.
 3. **Keputusan** — lanjut ke phase berikutnya atau selesaikan gap dulu.
-4. **Update PROGRESS.md** — catat bahwa gate check sudah dijalankan dan hasilnya.
-5. **Update CURRENT-TASK.md** — reset untuk task pertama phase berikutnya (jika gate lulus).
+4. **Catatan progress** - catat bahwa gate check sudah dijalankan dan hasilnya di final response atau dokumen progress jika repo menyediakannya.
+5. **Catatan task berikutnya** - catat task pertama phase berikutnya jika gate lulus.

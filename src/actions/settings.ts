@@ -97,7 +97,7 @@ export async function updateMultipleSettingsAction(settingsMap: Record<string, a
 }
 
 export async function checkMidtransConnectionAction(serverKey: string, isProduction: boolean) {
-  const user = await requireAuthorizedUser("pengaturan.settings", ["Admin"]);
+  await requireAuthorizedUser("pengaturan.settings", ["Admin"]);
   
   if (!serverKey) {
     return { success: false, error: "Server Key tidak boleh kosong." };
@@ -117,7 +117,7 @@ export async function checkMidtransConnectionAction(serverKey: string, isProduct
       },
     });
 
-    const data = await response.json();
+    await response.json();
 
     // Midtrans API returns 401 if Server Key is invalid
     if (response.status === 401) {

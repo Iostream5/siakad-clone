@@ -1,9 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { DoorOpen, Building2, Pencil, Plus, Search, Trash2, X, RotateCcw, Save } from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { Pencil, Plus, Search, Trash2, X, RotateCcw, Save } from "lucide-react";
 
 import { deleteGedungAction, upsertGedungAction, deleteRuanganAction, upsertRuanganAction } from "@/actions/ruangan";
 import { Button } from "@/components/ui/button";
@@ -16,8 +14,6 @@ export function RuanganManager({ gedungs, ruanganData }: any) {
   const [activeTab, setActiveTab] = useState<"gedung" | "ruangan">("ruangan");
   const [search, setSearch] = useState("");
   const [editingItem, setEditingItem] = useState<any>(null);
-  
-  const router = useRouter();
 
   // Handle Reset Form
   const resetForm = () => setEditingItem(null);

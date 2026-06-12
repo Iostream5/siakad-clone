@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
@@ -13,7 +13,6 @@ import {
   Sun, 
   User as UserIcon, 
   Settings, 
-  Command, 
   ChevronDown
 } from "lucide-react";
 
@@ -44,6 +43,22 @@ function formatNotificationDate(value: string) {
   }).format(date);
 }
 
+function subscribeClientReady() {
+  return () => {};
+}
+
+function getClientSnapshot() {
+  return true;
+}
+
+function getServerSnapshot() {
+  return false;
+}
+
+function useClientReady() {
+  return useSyncExternalStore(subscribeClientReady, getClientSnapshot, getServerSnapshot);
+}
+
 export function Topbar({
   user,
   onToggleSidebar,
@@ -55,7 +70,7 @@ export function Topbar({
 }) {
   const pathname = usePathname();
   const availableRoles = user.availableRoles ?? [user.role];
-  const [mounted, setMounted] = useState(false);
+  const clientReady = useClientReady();
   const [isDark, setIsDark] = useState(false); // Placeholder for theme state
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const unreadCount = notificationPreview.unreadCount;
@@ -69,11 +84,7 @@ export function Topbar({
     return "Selamat Malam";
   };
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
+  if (!clientReady) return null;
 
   return (
     <div className="sticky top-0 z-40 w-full mb-6">

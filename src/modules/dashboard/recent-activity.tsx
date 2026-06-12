@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { getActivityLogs } from "@/lib/admin/activity-audit";
-import { History, User, Database, ArrowRight } from "lucide-react";
+import { Database, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 function formatDateShort(value: string) {

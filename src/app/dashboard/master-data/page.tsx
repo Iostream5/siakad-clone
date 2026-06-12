@@ -15,12 +15,11 @@ import {
   ProgramStudiSection,
   TahunAkademikSection,
 } from "@/modules/master-data/sections";
-import { RolePanel } from "@/modules/shared/role-panel";
 
 export default async function MasterDataPage() {
   await connection();
 
-  const user = await requireAuthorizedUser("master-data");
+  await requireAuthorizedUser("master-data");
   const snapshot = await getMasterDataSnapshot();
 
   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { BarChart3, BookMarked, CreditCard, UserRoundCheck } from "lucide-react";
+import { BarChart3, BookMarked, UserRoundCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";

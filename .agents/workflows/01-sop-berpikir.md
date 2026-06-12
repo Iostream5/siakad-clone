@@ -22,7 +22,7 @@ Sebelum apapun, agent harus mengkonfirmasi stack yang sedang dipakai:
 - Auth: **Supabase Auth** — bukan Better Auth, bukan NextAuth.
 - Database: **Supabase PostgreSQL** — bukan SQLite, bukan Prisma.
 - Query layer: **Supabase JS Client** — bukan ORM Prisma.
-- Route protection: **`proxy.ts`** — bukan `middleware.ts` (breaking change Next.js 16).
+- Route protection: **`src/proxy.ts`** — bukan `middleware.ts` (breaking change Next.js 16).
 - Migrations: **SQL files di `supabase/migrations/`** — bukan Prisma migrate.
 - Styling: **Tailwind CSS v4** — konfigurasi di CSS, bukan `tailwind.config.js`.
 - Deployment: **Vercel** + **Supabase Cloud**.
@@ -44,7 +44,7 @@ Rujuk `docs/tahapan/TAHAPAN-PHASE-PENGERJAAN.md` dan tentukan:
 
 ### Checklist
 
-- [ ] Stack dikonfirmasi: Next.js 16, Supabase Auth, Supabase PostgreSQL, Supabase client, `proxy.ts`
+- [ ] Stack dikonfirmasi: Next.js 16, Supabase Auth, Supabase PostgreSQL, Supabase client, `src/proxy.ts`
 - [ ] Tidak ada asumsi Prisma, Better Auth, SQLite, atau `middleware.ts`
 - [ ] Environment teridentifikasi (DEV / production)
 - [ ] Phase aktif diketahui
@@ -71,7 +71,7 @@ STEP 2: Pahami perbedaan prompt lama vs kondisi aktual.
 | Database dev | SQLite | Supabase PostgreSQL |
 | ORM | Prisma | Supabase client |
 | Auth | Better Auth / NextAuth | Supabase Auth |
-| Route protection | `middleware.ts` | `proxy.ts` |
+| Route protection | `middleware.ts` | `src/proxy.ts` |
 | Role naming | `SUPER_ADMIN`, `ADMIN_AKADEMIK` | `admin`, `prodi`, `dosen`, dll |
 | Schema management | Prisma schema | SQL migration files |
 
@@ -174,7 +174,7 @@ STEP 3: Identifikasi batasan yang tidak boleh dilanggar.
 
 Hal-hal yang **mutlak tidak boleh** dilakukan:
 
-- Memakai `middleware.ts` — gunakan `proxy.ts`.
+- Memakai `middleware.ts` — gunakan `src/proxy.ts`.
 - Memakai Prisma — gunakan Supabase client.
 - Memakai Better Auth / NextAuth — gunakan Supabase Auth.
 - Menyimpan `SUPABASE_SERVICE_ROLE_KEY` sebagai `NEXT_PUBLIC_*`.
@@ -241,7 +241,7 @@ Task dianggap selesai jika:
 
 Setelah menyelesaikan SOP Berpikir ini, AI Agent harus menghasilkan:
 
-1. **Konfirmasi stack** — pernyataan eksplisit bahwa stack yang dipahami sudah benar (Next.js 16, Supabase, `proxy.ts`, SQL migrations).
+1. **Konfirmasi stack** — pernyataan eksplisit bahwa stack yang dipahami sudah benar (Next.js 16, Supabase, `src/proxy.ts`, SQL migrations).
 2. **Ringkasan task** — deskripsi singkat apa yang akan dikerjakan, dipecah menjadi unit kecil.
 3. **Daftar file** — file baru yang akan dibuat, file yang akan diubah, file yang hanya dibaca.
 4. **Daftar risiko** — risiko keamanan dan data integrity yang sudah diidentifikasi beserta mitigasinya.

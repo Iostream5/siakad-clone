@@ -49,7 +49,7 @@ SIAKAD STAI Al-Ittihad adalah sistem informasi akademik kampus berbasis web yang
 
 | Layer | Teknologi | Versi | Catatan |
 |---|---|---|---|
-| Framework | Next.js | 16.2.4 | App Router. `middleware.ts` sudah diganti `proxy.ts` |
+| Framework | Next.js | 16.2.4 | App Router. `middleware.ts` sudah diganti `src/proxy.ts` |
 | UI Library | React | 19.2.4 | Gunakan fitur terbaru: `use()`, Suspense boundary |
 | Language | TypeScript | Strict mode | `noImplicitAny`, `strictNullChecks` wajib aktif |
 | Styling | Tailwind CSS | v4 | Konfigurasi di CSS, bukan `tailwind.config.js` |
@@ -66,7 +66,7 @@ SIAKAD STAI Al-Ittihad adalah sistem informasi akademik kampus berbasis web yang
 | Database | Supabase PostgreSQL | Bukan SQLite. Bukan Prisma. Raw SQL + Supabase client |
 | ORM / Query | Supabase JS Client (`@supabase/supabase-js`) | Browser, server, dan admin client terpisah |
 | Auth | **Supabase Auth** | Bukan Better Auth. Bukan NextAuth. Supabase Auth saja |
-| Migrations | SQL files di folder `/migrations` | Jalankan manual atau via Supabase CLI |
+| Migrations | SQL files di folder `supabase/migrations/` | Jalankan manual atau via Supabase CLI |
 | Storage | Supabase Storage | Untuk upload dokumen, foto, berkas PMB |
 | Realtime | Supabase Realtime (opsional) | Untuk notifikasi in-app jika diperlukan |
 
@@ -89,13 +89,13 @@ SIAKAD STAI Al-Ittihad adalah sistem informasi akademik kampus berbasis web yang
 
 | Perubahan | Next.js 15 (Lama) | Next.js 16 (Aktual) | Impact |
 |---|---|---|---|
-| Route Protection | `middleware.ts` | `proxy.ts` | **BREAKING — harus migrasi** |
+| Route Protection | `middleware.ts` | `src/proxy.ts` | **BREAKING — harus migrasi** |
 | Caching | Implicit / otomatis | Explicit via Cache Components | Perubahan perilaku fetch |
 | Bundler | Webpack (default) | Turbopack (default) | Konfigurasi webpack mungkin tidak berlaku |
 | PPR | `experimental.ppr` flag | Cache Components API baru | Flag lama dihapus |
 | Dev Tools | — | DevTools MCP tersedia | Fitur baru, opsional |
 
-> 🚨 **PENTING:** Semua prompt lama yang menyebut `middleware.ts` untuk route protection **harus diganti** menjadi `proxy.ts`. Ini adalah perubahan terbesar dari Next.js 16.
+> 🚨 **PENTING:** Semua prompt lama yang menyebut `middleware.ts` untuk route protection **harus diganti** menjadi `src/proxy.ts`. Ini adalah perubahan terbesar dari Next.js 16.
 
 ---
 
@@ -145,7 +145,7 @@ Format permission yang digunakan: **`module.action`**
 
 ## 5. Database Design
 
-> ℹ️ Database menggunakan **Supabase PostgreSQL**. **TIDAK** menggunakan Prisma atau SQLite. Semua schema ditulis sebagai SQL migration files di folder `/migrations`.
+> ℹ️ Database menggunakan **Supabase PostgreSQL**. **TIDAK** menggunakan Prisma atau SQLite. Semua schema ditulis sebagai SQL migration files di folder `supabase/migrations/`.
 
 ### 5.1 Konvensi Penamaan
 
@@ -213,7 +213,7 @@ edom_questionnaires, edom_responses
 
 ## 6. Security Requirements
 
-> 🚨 Semua Server Action yang melakukan mutasi data **WAJIB** memiliki authorization server-side. `proxy.ts` hanya boleh digunakan sebagai UX redirect, bukan sebagai security boundary utama.
+> 🚨 Semua Server Action yang melakukan mutasi data **WAJIB** memiliki authorization server-side. `src/proxy.ts` hanya boleh digunakan sebagai UX redirect, bukan sebagai security boundary utama.
 
 ### 6.1 Rules Wajib
 
@@ -247,7 +247,7 @@ NEXT_PUBLIC_APP_URL=
 # .env.local — TIDAK di-commit
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
@@ -262,7 +262,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - [ ] Nonaktifkan demo auth di production environment
 - [ ] Pastikan env secrets tidak masuk git
 - [ ] Audit semua Server Action — pastikan ada authorization check
-- [ ] Ganti semua `middleware.ts` menjadi `proxy.ts` (breaking change Next.js 16)
+- [ ] Ganti semua `middleware.ts` menjadi `src/proxy.ts` (breaking change Next.js 16)
 - [ ] Pasang husky pre-commit: `npm run lint` + `npx tsc --noEmit` harus hijau
 - [ ] Verifikasi `npm run build` berhasil tanpa error
 - [ ] Aktifkan RLS di Supabase untuk tabel sensitif
@@ -272,7 +272,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 | Fitur | Priority | Status Target |
 |---|---|---|
 | Login (email/username) via Supabase Auth | P0 | Wajib selesai |
-| Session management dan route protection via `proxy.ts` | P0 | Wajib selesai |
+| Session management dan route protection via `src/proxy.ts` | P0 | Wajib selesai |
 | Dynamic RBAC (roles, permissions, role_permissions) | P0 | Wajib selesai |
 | Dynamic sidebar dari database (menus table) | P0 | Wajib selesai |
 | CRUD Users dengan search, filter, pagination | P1 | Wajib selesai |
@@ -373,7 +373,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ├── docs/                            # PRD, ADR, dokumentasi teknis
 │   └── PRD-SIAKAD.md                # File ini
 │
-├── proxy.ts                         # Route protection (bukan middleware.ts)
+├── src/proxy.ts                         # Route protection (bukan middleware.ts)
 ├── .env.example                     # Di-commit ke git
 ├── .env.local                       # TIDAK di-commit
 └── package.json
@@ -402,7 +402,7 @@ Project dianggap selesai Phase 1 jika **semua** kriteria berikut terpenuhi:
 | 13 | Audit log tercatat untuk login, CRUD, dan aksi penting | Cek tabel `audit_logs` |
 | 14 | Demo auth **TIDAK** aktif di production | Cek environment production |
 | 15 | Tidak ada `.env.local` di git history | `git log --all -- .env.local` |
-| 16 | `proxy.ts` digunakan (bukan `middleware.ts`) | Cek file di root project |
+| 16 | `src/proxy.ts` digunakan (bukan `middleware.ts`) | Cek file di `src/` |
 | 17 | RLS aktif di Supabase untuk tabel sensitif | Cek Supabase dashboard |
 
 ---
@@ -433,7 +433,7 @@ Stack:
 - Tailwind CSS v4
 - Shadcn UI + Radix UI
 - Server Actions untuk mutasi data
-- proxy.ts untuk route protection (bukan middleware.ts)
+- src/proxy.ts untuk route protection (bukan middleware.ts)
 
 Context file yang relevan:
 [paste isi file di sini]
@@ -459,7 +459,7 @@ Output yang diharapkan:
 
 | ❌ Jangan | ✅ Gantinya |
 |---|---|
-| Gunakan `middleware.ts` | Gunakan `proxy.ts` (Next.js 16) |
+| Gunakan `middleware.ts` | Gunakan `src/proxy.ts` (Next.js 16) |
 | Gunakan Prisma | Gunakan Supabase client |
 | Gunakan Better Auth / NextAuth | Gunakan Supabase Auth |
 | Hardcode kredensial di kode | Gunakan environment variables |
@@ -478,8 +478,8 @@ Output yang diharapkan:
 | Auth | Better Auth / NextAuth | **Supabase Auth** | Repo aktual sudah pakai Supabase |
 | ORM | Prisma | **Supabase client langsung** | Repo aktual tidak menggunakan Prisma |
 | Database dev | SQLite | **Supabase PostgreSQL** | Tidak ada migrasi SQLite ke Postgres |
-| Route protection | `middleware.ts` | **`proxy.ts`** | Breaking change Next.js 16 |
-| Migration | Prisma schema + migrate | **SQL files di `/migrations`** | Sesuai pola Supabase |
+| Route protection | `middleware.ts` | **`src/proxy.ts`** | Breaking change Next.js 16 |
+| Migration | Prisma schema + migrate | **SQL files di `supabase/migrations/`** | Sesuai pola Supabase |
 | Storage | Local (dev) / Supabase (prod) | **Supabase Storage selalu** | Konsistensi dev-prod |
 | Role naming | `SUPER_ADMIN`, `ADMIN_AKADEMIK`, dll | **`admin`, `prodi`, `dosen`, dll** | Sesuai repo aktual |
 | Multi-tenant | Full multi-tenant Phase 1 | **Seed 1 tenant, siapkan struktur** | Hindari over-engineering Phase 1 |

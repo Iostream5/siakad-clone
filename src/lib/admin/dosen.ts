@@ -1,7 +1,6 @@
 import "server-only";
 
 import { createAdminClient } from "@/supabase/admin";
-import { dosenSchema } from "@/lib/validators";
 
 export type DosenRow = {
   id: string;

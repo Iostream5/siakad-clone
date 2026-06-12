@@ -197,7 +197,7 @@ import { FakultasForm } from './fakultas-form'
 
 ```text
 1. Buat/update migration SQL jika ada perubahan schema
-   → migrations/NNN_nama_fitur.sql
+   → supabase/migrations/<nomor>_nama_fitur.sql
 
 2. Buat query helper
    → src/lib/admin/nama-modul.ts

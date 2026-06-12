@@ -17,7 +17,7 @@ Memastikan AI memahami sistem autentikasi, otorisasi berbasis role, dan dynamic 
 |---|---|---|
 | Auth Provider | **Supabase Auth** | Bukan Better Auth, bukan NextAuth |
 | Session | Cookie internal `siakad_session` | HMAC signed jika `SESSION_SECRET` tersedia |
-| Route Protection | **`proxy.ts`** di root | Bukan `middleware.ts` — breaking change Next.js 16 |
+| Route Protection | **`src/proxy.ts`** | Bukan `middleware.ts` — breaking change Next.js 16 |
 | Demo Auth | Fallback lokal | Hanya boleh aktif saat `NODE_ENV !== 'production'` |
 | Multi-Role | `user_roles` table | Satu user bisa punya lebih dari satu role |
 
@@ -50,7 +50,7 @@ users
 
 ### 2.1 Auth Check di Server Action — Wajib
 
-Setiap Server Action yang melakukan **mutasi data** wajib melakukan cek otorisasi server-side. `proxy.ts` hanya UX redirect, bukan security boundary.
+Setiap Server Action yang melakukan **mutasi data** wajib melakukan cek otorisasi server-side. `src/proxy.ts` hanya UX redirect, bukan security boundary.
 
 ✅ BENAR
 ```typescript
@@ -84,7 +84,7 @@ export async function deleteUserAction(userId: string) {
 }
 ```
 
-Alasan: Server Actions dapat dipanggil langsung via fetch, tanpa melalui UI. `proxy.ts` tidak melindungi action.
+Alasan: Server Actions dapat dipanggil langsung via fetch, tanpa melalui UI. `src/proxy.ts` tidak melindungi action.
 
 ### 2.2 Demo Auth Hanya untuk Development
 
@@ -162,11 +162,11 @@ User submit form login
       → Redirect ke /dashboard
 ```
 
-### Route Protection Flow (proxy.ts)
+### Route Protection Flow (src/proxy.ts)
 
 ```text
 Request masuk
-  → proxy.ts membaca cookie siakad_session
+  → src/proxy.ts membaca cookie siakad_session
     → Jika tidak ada session → redirect /login
     → Jika ada session:
         → Validasi session (HMAC atau JSON parse)
@@ -312,7 +312,7 @@ export async function validateUserCanLogin(userId: string) {
 Sebelum menulis auth/RBAC code, verifikasi:
 
 - [ ] Apakah menggunakan Supabase Auth (bukan Better Auth/NextAuth)?
-- [ ] Apakah route protection menggunakan `proxy.ts` (bukan `middleware.ts`)?
+- [ ] Apakah route protection menggunakan `src/proxy.ts` (bukan `middleware.ts`)?
 - [ ] Apakah Server Action mutasi memiliki `requireAuthorizedUser`?
 - [ ] Apakah demo auth hanya aktif saat `NODE_ENV !== 'production'`?
 - [ ] Apakah service role key tidak di-expose sebagai `NEXT_PUBLIC_`?
@@ -327,7 +327,7 @@ Sebelum menulis auth/RBAC code, verifikasi:
 ## 8. Ringkasan
 
 - Auth: **Supabase Auth** — session cookie `siakad_session` + HMAC signed
-- Route protection: **`proxy.ts`** — bukan security boundary utama
+- Route protection: **`src/proxy.ts`** — bukan security boundary utama
 - Server Action: **wajib `requireAuthorizedUser`** — tidak cukup route guard
 - Demo auth: **nonaktif di production**
 - Service role: **server-side only**, tidak pernah `NEXT_PUBLIC_`

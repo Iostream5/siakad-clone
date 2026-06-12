@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Download, FileUp, Pencil, Plus, Search, Trash2, X, BookOpen } from "lucide-react";
+import { Download, Pencil, Plus, Search, Trash2, X, BookOpen } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { deleteMataKuliahAction, saveMataKuliahAction } from "@/actions/mata-kuliah";

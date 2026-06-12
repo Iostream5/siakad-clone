@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Library, Pencil, Plus, Search, Trash2, X, RotateCcw, Save, GraduationCap } from "lucide-react";
+import { Library, Pencil, Plus, Search, Trash2, X, RotateCcw, Save } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 

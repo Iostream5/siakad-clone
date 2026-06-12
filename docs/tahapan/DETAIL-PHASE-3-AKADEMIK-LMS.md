@@ -62,7 +62,7 @@ Tidak masuk scope:
 - KRS page: `src/app/dashboard/krs/page.tsx`
 - Nilai page: `src/app/dashboard/nilai/page.tsx`
 - Master jadwal/mata kuliah/dosen/mahasiswa: `src/modules/master-data`
-- Migrations: `migrations/`
+- Migrations: `supabase/migrations/`
 
 ## Phase 3.1 - Audit Schema Akademik dan LMS
 

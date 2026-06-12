@@ -27,7 +27,7 @@ SIAKAD STAI Al-Ittihad adalah sistem informasi akademik kampus berbasis web yang
 
 | Layer | Teknologi | Versi | Catatan |
 |---|---|---|---|
-| Framework | Next.js | **16.2.4** | App Router. `middleware.ts` sudah **DIHAPUS**, diganti `proxy.ts` |
+| Framework | Next.js | **16.2.4** | App Router. `middleware.ts` sudah **DIHAPUS**, diganti `src/proxy.ts` |
 | UI | React | 19.2.4 | `use()`, Suspense boundary |
 | Language | TypeScript | Strict | `noImplicitAny`, `strictNullChecks` aktif |
 | Styling | Tailwind CSS | v4 | Konfigurasi di CSS, bukan `tailwind.config.js` |
@@ -39,7 +39,7 @@ SIAKAD STAI Al-Ittihad adalah sistem informasi akademik kampus berbasis web yang
 | Database | **Supabase PostgreSQL** | — | Bukan SQLite, bukan Prisma |
 | Query | Supabase JS Client | Latest | Browser/server/admin client terpisah |
 | Auth | **Supabase Auth** | — | Bukan Better Auth, bukan NextAuth |
-| Migrations | SQL files di `/migrations` | — | Jalankan manual/CLI, bernomor urut |
+| Migrations | SQL files di `supabase/migrations/` | — | Jalankan manual/CLI, bernomor urut |
 | Storage | Supabase Storage | — | Upload dokumen, foto, berkas PMB |
 | Deployment | Vercel | — | |
 | Payment | Midtrans + Xendit | — | Phase 2+ |
@@ -66,7 +66,7 @@ import NextAuth from 'next-auth'
 
 ✅ BENAR
 ```typescript
-// proxy.ts di root project — route protection Next.js 16
+// src/proxy.ts di `src/` — route protection Next.js 16
 export async function GET(req: Request) { ... }
 
 // Supabase client
@@ -75,7 +75,7 @@ const supabase = createServerClient()
 ```
 
 Alasan:
-- Next.js 16 mengganti `middleware.ts` dengan `proxy.ts` sebagai breaking change
+- Next.js 16 mengganti `middleware.ts` dengan `src/proxy.ts` sebagai breaking change
 - Repo aktual tidak menggunakan Prisma — schema dikelola via SQL migrations
 - Auth menggunakan Supabase Auth, bukan library pihak ketiga lain
 
@@ -84,7 +84,7 @@ Alasan:
 ❌ SALAH
 ```bash
 # .env.local di-commit
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=
 ```
 
 ✅ BENAR
@@ -151,13 +151,13 @@ src/
     migrate.ts
     seed.ts
   types/
-migrations/               # SQL migration files bernomor urut
+supabase/migrations/      # SQL migration files bernomor urut
   001_init.sql
   ...
   022_dynamic_menu_builder.sql
 docs/
   PRD-SIAKAD.md           # Sumber kebenaran utama
-proxy.ts                  # Route protection (BUKAN middleware.ts)
+src/proxy.ts                  # Route protection (BUKAN middleware.ts)
 ```
 
 ### Pola Data Flow
@@ -279,7 +279,7 @@ export async function updateUserAction(input: unknown) {
 Sebelum menghasilkan kode, verifikasi:
 
 - [ ] Apakah menggunakan Supabase client (bukan Prisma)?
-- [ ] Apakah menggunakan `proxy.ts` (bukan `middleware.ts`)?
+- [ ] Apakah menggunakan `src/proxy.ts` (bukan `middleware.ts`)?
 - [ ] Apakah auth menggunakan Supabase Auth?
 - [ ] Apakah Server Action mutasi memiliki `requireAuthorizedUser`?
 - [ ] Apakah input divalidasi dengan Zod?
@@ -294,8 +294,8 @@ Sebelum menghasilkan kode, verifikasi:
 ## 8. Ringkasan
 
 - Stack final: **Next.js 16.2.4, Supabase Auth, Supabase PostgreSQL, Supabase JS Client**
-- Route protection: **`proxy.ts`** — bukan `middleware.ts`
-- Database: **SQL migrations** di `/migrations` — bukan Prisma, bukan SQLite
+- Route protection: **`src/proxy.ts`** — bukan `middleware.ts`
+- Database: **SQL migrations** di `supabase/migrations/` — bukan Prisma, bukan SQLite
 - Auth: **Supabase Auth** — bukan Better Auth, bukan NextAuth
 - MCP dev: **`siakad_dev`** — jangan pakai `siakad` production saat status DEV
 - Secret: **tidak pernah di git**, tidak pernah `NEXT_PUBLIC_` untuk service role key

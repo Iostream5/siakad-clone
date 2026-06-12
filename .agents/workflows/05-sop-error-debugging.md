@@ -294,7 +294,7 @@ DROP TABLE IF EXISTS public._backup_kampus;
 
 ### Dokumentasi Rollback
 
-Catat di `PROGRESS.md`:
+Catat rollback di final response atau dokumen progress jika repo menyediakannya:
 
 ```markdown
 ### [Tanggal] - ROLLBACK: Phase 1.5 Kampus Manager
@@ -311,7 +311,7 @@ Catat di `PROGRESS.md`:
 - [ ] Alasan rollback jelas.
 - [ ] Rollback tepat sasaran, bukan reset brutal.
 - [ ] Build/type/lint diverifikasi lagi.
-- [ ] Rollback dicatat di `PROGRESS.md`.
+- [ ] Rollback dicatat di final response atau dokumen progress jika repo menyediakannya.
 - [ ] Rencana fix ulang sudah ada.
 
 ---
@@ -339,7 +339,7 @@ Jika error berasal dari aturan yang belum terdokumentasi, tambahkan catatan ke w
 - [ ] `npm run lint` hijau, jika relevan.
 - [ ] `npm run build` hijau, jika relevan.
 - [ ] Pola sama di file lain sudah dicek.
-- [ ] Error signifikan dicatat di `PROGRESS.md`.
+- [ ] Error signifikan dicatat di final response atau dokumen progress jika repo menyediakannya.
 - [ ] Tidak ada scope creep akibat debugging.
 - [ ] Rollback, jika ada, terdokumentasi.
 
