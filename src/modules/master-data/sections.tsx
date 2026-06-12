@@ -44,6 +44,12 @@ export function MasterDataQuickLinks({ snapshot }: { snapshot: MasterDataSnapsho
       caption: "Kelompok kelas akademik",
     },
     {
+      href: "/dashboard/master-data/jadwal-kuliah",
+      label: "Jadwal Kuliah",
+      value: "-",
+      caption: "Manajemen jadwal kelas, dosen, dan ruangan",
+    },
+    {
       href: "/dashboard/master-data/tahun-akademik",
       label: "Tahun Akademik",
       value: snapshot.counts.tahunAkademik,
