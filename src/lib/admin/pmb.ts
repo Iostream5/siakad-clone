@@ -1121,6 +1121,30 @@ export async function handleMidtransPmbNotification(payload: MidtransNotificatio
 
   verifyMidtransSignature(payload, midtrans.serverKey);
 
+  // Idempotency Check using webhook_events table
+  const eventId = String(payload.transaction_id || payload.order_id || Date.now());
+  const { data: existingEvent } = await supabase
+    .from("webhook_events")
+    .select("id")
+    .eq("provider", "midtrans")
+    .eq("event_id", eventId)
+    .maybeSingle();
+
+  if (existingEvent) {
+    return {
+      received: true,
+      ignored: true,
+      reason: "Webhook event already processed",
+    };
+  }
+
+  await supabase.from("webhook_events").insert({
+    provider: "midtrans",
+    event_id: eventId,
+    event_type: String(payload.transaction_status),
+    payload: payload as any,
+  });
+
   const orderId = normalizeMidtransString(payload.order_id);
   const transactionStatus = normalizeMidtransString(payload.transaction_status);
   const paymentType = normalizeMidtransString(payload.payment_type);

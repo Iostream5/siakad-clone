@@ -755,6 +755,7 @@ type MidtransFinanceNotificationPayload = {
   signature_key?: unknown;
   transaction_status?: unknown;
   fraud_status?: unknown;
+  transaction_id?: unknown;
 };
 
 const MIDTRANS_SANDBOX_SNAP_URL = "https://app.sandbox.midtrans.com/snap/v1/transactions";
@@ -953,6 +954,30 @@ export async function handleMidtransFinanceNotification(payload: MidtransFinance
   if (expected !== signatureKey) {
     throw new Error("Signature Midtrans tidak valid.");
   }
+
+  // Idempotency check
+  const eventId = String(payload.transaction_id || payload.order_id || Date.now());
+  const { data: existingEvent } = await supabase
+    .from("webhook_events")
+    .select("id")
+    .eq("provider", "midtrans")
+    .eq("event_id", eventId)
+    .maybeSingle();
+
+  if (existingEvent) {
+    return {
+      received: true,
+      ignored: true,
+      reason: "Webhook event already processed",
+    };
+  }
+
+  await supabase.from("webhook_events").insert({
+    provider: "midtrans",
+    event_id: eventId,
+    event_type: String(payload.transaction_status),
+    payload: payload as any,
+  });
 
   const transactionStatus = normalizeMidtransValue(payload.transaction_status);
   const fraudStatus = normalizeMidtransValue(payload.fraud_status);

@@ -109,14 +109,29 @@ export async function generateBulkTagihanAction(formData: FormData) {
   const { data: mahasiswa } = await query;
   if (!mahasiswa || mahasiswa.length === 0) throw new Error("Tidak ada mahasiswa yang cocok dengan kriteria");
 
-  const tagihanData = mahasiswa.map(m => ({
-    mahasiswa_id: m.id,
-    tahun_akademik_id: tahunAkademikId,
-    jenis: master.nama,
-    nominal: master.nominal,
-    jatuh_tempo: jatuhTempo,
-    status: "Belum Lunas"
-  }));
+  // Prevent duplicate tagihan mapping
+  const { data: existingTagihan } = await supabase
+    .from("tagihan")
+    .select("mahasiswa_id")
+    .eq("tahun_akademik_id", tahunAkademikId)
+    .eq("jenis", master.nama)
+    .in("mahasiswa_id", mahasiswa.map(m => m.id));
+
+  const existingMahasiswaIds = new Set(existingTagihan?.map(t => t.mahasiswa_id) || []);
+
+  const tagihanData = mahasiswa
+    .filter(m => !existingMahasiswaIds.has(m.id))
+    .map(m => ({
+      mahasiswa_id: m.id,
+      tahun_akademik_id: tahunAkademikId,
+      jenis: master.nama,
+      nominal: master.nominal,
+      jatuh_tempo: jatuhTempo,
+      status: "Belum Lunas",
+      master_biaya_id: masterId
+    }));
+
+  if (tagihanData.length === 0) throw new Error("Semua mahasiswa yang cocok sudah memiliki tagihan ini");
 
   const { error } = await supabase.from("tagihan").insert(tagihanData);
   if (error) throw error;
