@@ -1,41 +1,40 @@
-import { Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ReportAkademik } from "@/modules/reports/report-akademik";
+import { ReportPMB } from "@/modules/reports/report-pmb";
+import { ReportKeuangan } from "@/modules/reports/report-keuangan";
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-
-const reports = [
-  {
-    title: "Laporan Mahasiswa per Prodi",
-    description: "Siap export Excel untuk rekap jumlah mahasiswa aktif, cuti, dan lulus.",
-    icon: FileSpreadsheet,
-  },
-  {
-    title: "Laporan Keuangan Semester",
-    description: "Siap export PDF untuk tagihan, pembayaran, dispensasi, dan piutang.",
-    icon: FileText,
-  },
-];
-
-export function ReportPanel() {
+export function ReportPanel({
+  akademikData,
+  pmbData,
+  keuanganData,
+  prodiList,
+  tahunAkademikList
+}: {
+  akademikData: any[];
+  pmbData: any[];
+  keuanganData: any[];
+  prodiList: any[];
+  tahunAkademikList: any[];
+}) {
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      {reports.map((report) => {
-        const Icon = report.icon;
+    <Tabs defaultValue="akademik" className="space-y-6">
+      <TabsList className="bg-white border border-slate-200 h-14 w-full justify-start overflow-x-auto">
+        <TabsTrigger value="akademik" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">Laporan Akademik</TabsTrigger>
+        <TabsTrigger value="pmb" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">Laporan PMB</TabsTrigger>
+        <TabsTrigger value="keuangan" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">Laporan Keuangan</TabsTrigger>
+      </TabsList>
 
-        return (
-          <Card key={report.title}>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--accent)] text-[var(--primary-strong)]">
-              <Icon className="h-5 w-5" />
-            </div>
-            <h3 className="mt-5 text-xl font-semibold text-slate-900">{report.title}</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{report.description}</p>
-            <Button className="mt-6">
-              <Download className="mr-2 h-4 w-4" />
-              Export placeholder
-            </Button>
-          </Card>
-        );
-      })}
-    </div>
+      <TabsContent value="akademik" className="mt-0 outline-none">
+        <ReportAkademik data={akademikData} prodiList={prodiList} tahunAkademikList={tahunAkademikList} />
+      </TabsContent>
+
+      <TabsContent value="pmb" className="mt-0 outline-none">
+        <ReportPMB data={pmbData} prodiList={prodiList} tahunAkademikList={tahunAkademikList} />
+      </TabsContent>
+
+      <TabsContent value="keuangan" className="mt-0 outline-none">
+        <ReportKeuangan data={keuanganData} tahunAkademikList={tahunAkademikList} />
+      </TabsContent>
+    </Tabs>
   );
 }
