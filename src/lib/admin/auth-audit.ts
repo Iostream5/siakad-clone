@@ -13,7 +13,7 @@ export type AuthAuditRow = {
   } | null;
 };
 
-export async function getAuthAuditLogs(limit = 100) {
+export async function getAuthAuditLogs(limit = 100, filters?: { status?: string }) {
   const supabase = createAdminClient();
 
   if (!supabase) {

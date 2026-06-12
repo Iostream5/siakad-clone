@@ -37,7 +37,7 @@ export function GradesManager({
     }
 
     // Dynamic import of PDF generator only when needed
-    const { generateKHSPDF } = await import("@/lib/pdf-generator");
+    const { exportToPdf } = await import("@/lib/pdf-generator");
 
     const pdfData = {
       studentName: studentProfile.users?.full_name || "Mahasiswa",
@@ -56,7 +56,26 @@ export function GradesManager({
       gpa: studentProfile.ips || 0
     };
 
-    generateKHSPDF(pdfData);
+    exportToPdf({
+      title: "Kartu Hasil Studi (KHS)",
+      fileName: `KHS_${pdfData.nim}_${pdfData.academicYear}`,
+      data: pdfData.grades,
+      columns: [
+        { header: "Kode", accessorKey: "code" },
+        { header: "Mata Kuliah", accessorKey: "course" },
+        { header: "SKS", accessorKey: "sks" },
+        { header: "Nilai Angka", accessorKey: "score" },
+        { header: "Nilai Huruf", accessorKey: "grade" },
+        { header: "Bobot", accessorKey: "point" }
+      ],
+      filters: [
+        { label: "Nama Mahasiswa", value: pdfData.studentName },
+        { label: "NIM", value: pdfData.nim },
+        { label: "Program Studi", value: pdfData.prodi },
+        { label: "Tahun Akademik", value: `${pdfData.academicYear} - ${pdfData.semester}` },
+        { label: "IP Semester", value: String(pdfData.gpa) }
+      ]
+    });
     success("KHS Berhasil Diunduh", "File PDF sedang diproses oleh browser Anda.");
   };
 

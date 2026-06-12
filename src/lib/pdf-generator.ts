@@ -1,104 +1,66 @@
+import "client-only";
+
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-interface KHSData {
-  studentName: string;
-  nim: string;
-  prodi: string;
-  academicYear: string;
-  semester: string;
-  grades: Array<{
-    code: string;
-    course: string;
-    sks: number;
-    score: number | string;
-    grade: string;
-    point: number;
-  }>;
-  gpa: number;
-}
+export type ExportColumnDef<T> = {
+  header: string;
+  accessorKey?: keyof T | string;
+  accessorFn?: (row: T) => string | number;
+};
 
-export function generateKHSPDF(data: KHSData) {
-  const doc = new jsPDF();
+export type PdfExportOptions<T> = {
+  title: string;
+  data: T[];
+  columns: ExportColumnDef<T>[];
+  fileName: string;
+  filters?: { label: string; value: string }[];
+};
 
-  // 1. Header (Kop Surat)
-  doc.setFontSize(14);
+export function exportToPdf<T>({ title, data, columns, fileName, filters }: PdfExportOptions<T>) {
+  const doc = new jsPDF("p", "mm", "a4");
+
+  // Add Header
+  doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("STAI AL-ITTIHAD CIANJUR", 105, 20, { align: "center" });
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text("Jl. Raya Bandung No.03, Bojong, Karangtengah, Kabupaten Cianjur, Jawa Barat 43281", 105, 26, { align: "center" });
-  doc.line(20, 32, 190, 32); // Horizontal Line
+  doc.text(title, 14, 20);
 
-  // 2. Title
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text("KARTU HASIL STUDI (KHS)", 105, 42, { align: "center" });
+  let startY = 30;
 
-  // 3. Student Info
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "normal");
-  
-  // Left Column
-  doc.text("Nama Mahasiswa", 20, 52);
-  doc.text(`: ${data.studentName}`, 55, 52);
-  doc.text("NIM", 20, 57);
-  doc.text(`: ${data.nim}`, 55, 57);
-  doc.text("Program Studi", 20, 62);
-  doc.text(`: ${data.prodi}`, 55, 62);
+  // Add Filters if available
+  if (filters && filters.length > 0) {
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    filters.forEach((filter, index) => {
+      doc.text(`${filter.label}: ${filter.value}`, 14, startY + index * 5);
+    });
+    startY += filters.length * 5 + 5;
+  }
 
-  // Right Column
-  doc.text("Tahun Akademik", 130, 52);
-  doc.text(`: ${data.academicYear}`, 160, 52);
-  doc.text("Semester", 130, 57);
-  doc.text(`: ${data.semester}`, 160, 57);
-
-  // 4. Grades Table
-  const tableData = data.grades.map((g, index) => [
-    index + 1,
-    g.code,
-    g.course,
-    g.sks,
-    g.grade,
-    g.point,
-    g.point * g.sks
-  ]);
+  // Generate Table
+  const head = [columns.map((col) => col.header)];
+  const body = data.map((row) =>
+    columns.map((col) => {
+      if (col.accessorFn) {
+        return col.accessorFn(row);
+      }
+      if (col.accessorKey) {
+        const val = (row as any)[col.accessorKey];
+        return val !== null && val !== undefined ? String(val) : "-";
+      }
+      return "-";
+    })
+  );
 
   autoTable(doc, {
-    startY: 70,
-    head: [['No', 'Kode', 'Mata Kuliah', 'SKS', 'Nilai', 'Bobot', 'Total']],
-    body: tableData,
-    theme: 'grid',
-    headStyles: { fillColor: [79, 70, 229], halign: 'center' }, // Indigo color
-    columnStyles: {
-      0: { halign: 'center' },
-      1: { halign: 'center' },
-      3: { halign: 'center' },
-      4: { halign: 'center' },
-      5: { halign: 'center' },
-      6: { halign: 'center' },
-    },
-    styles: { fontSize: 8 }
+    startY,
+    head,
+    body,
+    theme: "striped",
+    headStyles: { fillColor: [63, 81, 181] }, // Indigo color
+    styles: { fontSize: 9 },
   });
 
-  const finalY = (doc as any).lastAutoTable.finalY || 150;
-
-  // 5. Summary Info
-  const totalSks = data.grades.reduce((acc, g) => acc + g.sks, 0);
-  const totalPoints = data.grades.reduce((acc, g) => acc + (g.point * g.sks), 0);
-
-  doc.setFont("helvetica", "bold");
-  doc.text(`Total SKS: ${totalSks}`, 20, finalY + 10);
-  doc.text(`Indeks Prestasi Semester (IPS): ${data.gpa.toFixed(2)}`, 20, finalY + 15);
-
-  // 6. Signature Area
-  const date = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-  doc.setFont("helvetica", "normal");
-  doc.text(`Cianjur, ${date}`, 140, finalY + 25);
-  doc.text("Ketua Program Studi,", 140, 30 + finalY + 5);
-  
-  doc.text("( ___________________________ )", 140, finalY + 60);
-
   // Save the PDF
-  doc.save(`KHS_${data.nim}_${data.academicYear.replace('/', '-')}.pdf`);
+  doc.save(`${fileName}.pdf`);
 }

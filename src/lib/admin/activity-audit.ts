@@ -14,7 +14,7 @@ export type ActivityAuditRow = {
   user_role?: string;
 };
 
-export async function getActivityLogs(limit = 100) {
+export async function getActivityLogs(limit = 100, filters?: { modul?: string, aksi?: string }) {
   const supabase = createAdminClient();
 
   if (!supabase) {
@@ -25,7 +25,7 @@ export async function getActivityLogs(limit = 100) {
   }
 
   // Melakukan join dengan tabel users untuk mendapatkan nama pelaku
-  const { data, error } = await supabase
+  let query = supabase
     .from("audit_logs")
     .select(`
       id, 
@@ -42,6 +42,15 @@ export async function getActivityLogs(limit = 100) {
     .neq("modul", "auth") // Kecualikan log login agar tidak duplikat dengan audit login
     .order("created_at", { ascending: false })
     .limit(limit);
+
+  if (filters?.modul && filters.modul !== "all") {
+    query = query.eq("modul", filters.modul);
+  }
+  if (filters?.aksi && filters.aksi !== "all") {
+    query = query.eq("aksi", filters.aksi);
+  }
+
+  const { data, error } = await query;
 
   const formattedRows = (data ?? []).map((item: any) => ({
     ...item,
