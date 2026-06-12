@@ -38,6 +38,16 @@ export async function submitKrsAction(mahasiswaId: string, tahunAkademikId: stri
 
   try {
     await submitKrs(mahasiswaId, tahunAkademikId, jadwalIds);
+
+    // Add audit log
+    const { logActivity } = await import("@/lib/admin/audit-logger");
+    await logActivity({
+      modul: "Akademik - KRS",
+      aksi: "CREATE",
+      tableName: "krs_header",
+      newData: { mahasiswaId, tahunAkademikId, jadwalIds }
+    });
+
     revalidatePath("/dashboard/krs");
     redirect(withToastParams("/dashboard/krs", { variant: "success", title: "KRS berhasil diajukan", message: "Menunggu persetujuan Dosen Wali." }));
   } catch (error) {
@@ -62,6 +72,17 @@ export async function approveKrsAction(formData: FormData) {
 
   try {
     await updateKrsStatus(krsId, status, user.id, catatan);
+
+    // Add audit log
+    const { logActivity } = await import("@/lib/admin/audit-logger");
+    await logActivity({
+      modul: "Akademik - KRS",
+      aksi: status === "Disetujui" ? "APPROVE" : "REJECT",
+      tableName: "krs_header",
+      recordId: krsId,
+      newData: { status, catatan, approved_by: user.id }
+    });
+
     revalidatePath("/dashboard/krs");
     redirect(withToastParams("/dashboard/krs", { variant: "success", title: "Status KRS diperbarui" }));
   } catch (error) {
