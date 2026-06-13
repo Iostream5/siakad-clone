@@ -57,6 +57,7 @@ const itemMeta = {
   "/dashboard/master-data/kelas": { icon: GraduationCap, accent: "text-violet-300", badge: null },
   "/dashboard/master-data/kurikulum": { icon: BookOpenCheck, accent: "text-emerald-300", badge: null },
   "/dashboard/master-data/mata-kuliah": { icon: BookOpen, accent: "text-emerald-300", badge: null },
+  "/dashboard/master-data/jadwal-kuliah": { icon: Calendar, accent: "text-sky-300", badge: null },
   "/dashboard/master-data/dosen": { icon: UserCheck, accent: "text-orange-300", badge: null },
   "/dashboard/master-data/mahasiswa": { icon: User, accent: "text-rose-300", badge: null },
   "/dashboard/master-data/ruangan": { icon: DoorOpen, accent: "text-amber-300", badge: null },

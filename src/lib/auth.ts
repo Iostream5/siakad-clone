@@ -26,6 +26,10 @@ function verifySignature(payload: string, signature: string, secret: string) {
   return expectedBuffer.length === actualBuffer.length && timingSafeEqual(expectedBuffer, actualBuffer);
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 export function encodeSessionCookie(user: SessionUser) {
   const payload = Buffer.from(JSON.stringify(normalizeSessionUser(user))).toString("base64url");
   const secret = getSessionSecret();
@@ -83,7 +87,7 @@ function normalizeSessionUser(user: SessionUser): SessionUser {
 async function buildSessionUserFromDatabase(userId: string, preferredRole?: UserRole | null): Promise<SessionUser | null> {
   const supabase = createAdminClient();
 
-  if (!supabase) {
+  if (!supabase || !isUuid(userId)) {
     return null;
   }
 

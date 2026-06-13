@@ -53,6 +53,10 @@ function uniqueRoles(values: UserRole[]) {
   return Array.from(new Set(values)).filter((value): value is UserRole => roles.includes(value));
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 function getFallbackMenuRows(): MenuRow[] {
   return menuDefinitions.map((item, index) => ({
     id: `fallback-${item.key}`,
@@ -133,12 +137,13 @@ function getDefaultMenuKeysFromRows(rows: MenuRow[], role: UserRole) {
 
 async function getUserRolesMap(userIds: string[]) {
   const supabase = createAdminClient();
+  const validUserIds = userIds.filter(isUuid);
 
-  if (!supabase || userIds.length === 0) {
+  if (!supabase || validUserIds.length === 0) {
     return new Map<string, UserRole[]>();
   }
 
-  const result = await supabase.from("user_roles").select("user_id, role").in("user_id", userIds);
+  const result = await supabase.from("user_roles").select("user_id, role").in("user_id", validUserIds);
 
   if (result.error?.code === "42P01") {
     return new Map<string, UserRole[]>();
@@ -193,7 +198,7 @@ async function getRolePermissionOverrides(role: UserRole) {
 export async function getAssignedRoles(userId: string, fallbackRole: UserRole) {
   const supabase = createAdminClient();
 
-  if (!supabase) {
+  if (!supabase || !isUuid(userId)) {
     return [fallbackRole];
   }
 
@@ -224,7 +229,7 @@ export async function getUserAccessContext(userId: string, fallbackRole: UserRol
   const supabase = createAdminClient();
   const menuRows = resolveMenuRows(await getMenuRowsForAccess());
 
-  if (!supabase) {
+  if (!supabase || !isUuid(userId)) {
     return getRoleAccessContext(fallbackRole);
   }
 
@@ -251,7 +256,7 @@ export async function getUserAccessContext(userId: string, fallbackRole: UserRol
 export async function getManagedUserById(userId: string) {
   const supabase = createAdminClient();
 
-  if (!supabase) {
+  if (!supabase || !isUuid(userId)) {
     return null;
   }
 

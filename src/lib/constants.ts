@@ -22,7 +22,7 @@ export const roles: UserRole[] = [
 
 export const demoUsers: Record<string, SessionUser & { password: string }> = {
   admin: {
-    id: "usr-admin",
+    id: "00000000-0000-4000-8000-000000000001",
     name: "Admin SIAKAD",
     identifier: "admin",
     role: "Admin",
@@ -31,7 +31,7 @@ export const demoUsers: Record<string, SessionUser & { password: string }> = {
     password: "admin123",
   },
   prodi: {
-    id: "usr-prodi",
+    id: "00000000-0000-4000-8000-000000000002",
     name: "Ketua Prodi Informatika",
     identifier: "prodi",
     role: "Prodi",
@@ -40,7 +40,7 @@ export const demoUsers: Record<string, SessionUser & { password: string }> = {
     password: "prodi123",
   },
   dosen: {
-    id: "usr-dosen",
+    id: "00000000-0000-4000-8000-000000000003",
     name: "Dr. Ahmad Fauzi",
     identifier: "dosen",
     role: "Dosen",
@@ -49,7 +49,7 @@ export const demoUsers: Record<string, SessionUser & { password: string }> = {
     password: "dosen123",
   },
   mahasiswa: {
-    id: "usr-mhs",
+    id: "00000000-0000-4000-8000-000000000004",
     name: "Nadia Putri",
     identifier: "mahasiswa",
     role: "Mahasiswa",
@@ -58,7 +58,7 @@ export const demoUsers: Record<string, SessionUser & { password: string }> = {
     password: "mhs12345",
   },
   staff: {
-    id: "usr-staff",
+    id: "00000000-0000-4000-8000-000000000005",
     name: "Staff Akademik",
     identifier: "staff",
     role: "Staff",
@@ -67,7 +67,7 @@ export const demoUsers: Record<string, SessionUser & { password: string }> = {
     password: "staff123",
   },
   keuangan: {
-    id: "usr-keu",
+    id: "00000000-0000-4000-8000-000000000006",
     name: "Biro Keuangan",
     identifier: "keuangan",
     role: "Keuangan",
@@ -76,7 +76,7 @@ export const demoUsers: Record<string, SessionUser & { password: string }> = {
     password: "keu12345",
   },
   pimpinan: {
-    id: "usr-pimpinan",
+    id: "00000000-0000-4000-8000-000000000007",
     name: "Wakil Rektor",
     identifier: "pimpinan",
     role: "Pimpinan",
@@ -102,6 +102,7 @@ export const sidebarItems: SidebarItem[] = [
       { key: "master-data.kelas", href: "/dashboard/master-data/kelas", label: "Kelas" },
       { key: "master-data.kurikulum", href: "/dashboard/master-data/kurikulum", label: "Kurikulum" },
       { key: "master-data.mata-kuliah", href: "/dashboard/master-data/mata-kuliah", label: "Mata Kuliah" },
+      { key: "master-data.jadwal-kuliah", href: "/dashboard/master-data/jadwal-kuliah", label: "Jadwal Kuliah", roles: ["Admin", "Prodi"] },
       { key: "master-data.dosen", href: "/dashboard/master-data/dosen", label: "Dosen" },
       { key: "master-data.mahasiswa", href: "/dashboard/master-data/mahasiswa", label: "Mahasiswa" },
       { key: "master-data.ruangan", href: "/dashboard/master-data/ruangan", label: "Ruangan" },
