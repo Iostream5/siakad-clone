@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createHmac, timingSafeEqual } from "crypto";
 
 import { getUserAccessContext } from "@/lib/admin/access-control";
+import { withToastParams } from "@/lib/toast-query";
 import { demoUsers, roles } from "@/lib/constants";
 import { createAdminClient } from "@/supabase/admin";
 import type { SessionUser, UserRole } from "@/types/domain";
@@ -152,11 +153,23 @@ export async function requireUser(allowedRoles?: UserRole[]) {
   const user = await getResolvedSessionUser();
 
   if (!user) {
-    redirect("/login");
+    redirect(
+      withToastParams("/login", {
+        variant: "error",
+        title: "Akses Ditolak",
+        message: "Anda harus login untuk mengakses halaman ini.",
+      }),
+    );
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    redirect("/dashboard");
+    redirect(
+      withToastParams("/dashboard", {
+        variant: "error",
+        title: "Akses Ditolak",
+        message: "Anda tidak memiliki izin untuk tindakan ini.",
+      }),
+    );
   }
 
   return user;
@@ -167,11 +180,23 @@ export async function requireAuthorizedUser(menuKey: string, allowedRoles?: User
   const access = await getUserAccessContext(user.id, user.role);
 
   if (!access.allowedMenuKeys.includes(menuKey)) {
-    redirect("/dashboard");
+    redirect(
+      withToastParams("/dashboard", {
+        variant: "error",
+        title: "Akses Ditolak",
+        message: "Anda tidak memiliki akses ke modul ini.",
+      }),
+    );
   }
 
   if (allowedRoles && !allowedRoles.includes(access.resolvedRole)) {
-    redirect("/dashboard");
+    redirect(
+      withToastParams("/dashboard", {
+        variant: "error",
+        title: "Akses Ditolak",
+        message: "Role Anda tidak diizinkan untuk tindakan ini.",
+      }),
+    );
   }
 
   return {
