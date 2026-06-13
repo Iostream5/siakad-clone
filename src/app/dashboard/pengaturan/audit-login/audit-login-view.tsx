@@ -1,5 +1,5 @@
 "use client";
-
+import { AuditLoginRowItem } from "@/types/domain";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,7 +17,7 @@ function formatDate(value: string) {
   }).format(date);
 }
 
-export function AuditLoginView({ rows, error, successCount, failedCount }: { rows: any[], error: string | null, successCount: number, failedCount: number }) {
+export function AuditLoginView({ rows, error, successCount, failedCount }: { rows: AuditLoginRowItem[], error: string | null, successCount: number, failedCount: number }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 

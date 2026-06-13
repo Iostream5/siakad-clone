@@ -1,5 +1,5 @@
 "use client";
-
+import { WebhookLogItem } from "@/types/domain";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Webhook, Info } from "lucide-react";
@@ -19,7 +19,7 @@ function formatDate(value: string) {
   }).format(date);
 }
 
-export function WebhookLogsView({ rows, error }: { rows: any[], error: string | null }) {
+export function WebhookLogsView({ rows, error }: { rows: WebhookLogItem[], error: string | null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
