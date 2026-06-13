@@ -1,3 +1,4 @@
+import { KrsSubmissionItem } from "@/types/domain";
 import { connection } from "next/server";
 
 import { getAvailableJadwal, getStudentKrs, listKrsSubmissions } from "@/lib/admin/krs";
@@ -27,7 +28,7 @@ export default async function KrsPage() {
 
   let mahasiswaId = null;
   let currentKrs = null;
-  let submissions: any[] = [];
+  let submissions: KrsSubmissionItem[] = [];
 
   // 2. Logika per Role
   if (user.role === "Mahasiswa") {

@@ -1,3 +1,4 @@
+import { LmsClassItem } from "@/types/domain";
 import { requireAuthorizedUser } from "@/lib/auth";
 import { getLmsClassesForLecturer, getLmsClassesForStudent } from "@/lib/admin/lms";
 import { LmsDashboard } from "@/modules/lms/lms-dashboard";
@@ -5,7 +6,7 @@ import { LmsDashboard } from "@/modules/lms/lms-dashboard";
 export default async function LmsPage() {
   const user = await requireAuthorizedUser("akademik.lms", ["Admin", "Prodi", "Dosen", "Mahasiswa"]);
 
-  let classes: any[] = [];
+  let classes: LmsClassItem[] = [];
 
   if (user.role === "Dosen") {
     classes = await getLmsClassesForLecturer(user.id);

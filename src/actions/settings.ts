@@ -5,7 +5,7 @@ import { createAdminClient } from "@/supabase/admin";
 import { requireAuthorizedUser } from "@/lib/auth";
 import { logActivity } from "@/lib/admin/audit-logger";
 
-export async function updateSettingAction(key: string, value: any) {
+export async function updateSettingAction(key: string, value: string | number | boolean | null) {
   const user = await requireAuthorizedUser("pengaturan.settings", ["Admin"]);
   const supabase = createAdminClient();
   
@@ -53,7 +53,7 @@ export async function updateSettingAction(key: string, value: any) {
   }
 }
 
-export async function updateMultipleSettingsAction(settingsMap: Record<string, any>) {
+export async function updateMultipleSettingsAction(settingsMap: Record<string, string | number | boolean | null>) {
   const user = await requireAuthorizedUser("pengaturan.settings", ["Admin"]);
   const supabase = createAdminClient();
 

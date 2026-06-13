@@ -31,8 +31,8 @@ export async function saveJadwalKuliahAction(formData: FormData) {
     });
     revalidatePath("/dashboard/master-data/jadwal-kuliah");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message };
+  } catch (error: unknown) {
+    return { error: error instanceof Error ? error.message : "Terjadi kesalahan" };
   }
 }
 
@@ -50,7 +50,7 @@ export async function deleteJadwalKuliahAction(formData: FormData) {
     });
     revalidatePath("/dashboard/master-data/jadwal-kuliah");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message };
+  } catch (error: unknown) {
+    return { error: error instanceof Error ? error.message : "Terjadi kesalahan" };
   }
 }

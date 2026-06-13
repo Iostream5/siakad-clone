@@ -1,5 +1,5 @@
 "use client";
-
+import { AuditAktivitasItem } from "@/types/domain";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { History, User, Database, Info } from "lucide-react";
@@ -19,7 +19,7 @@ function formatDate(value: string) {
   }).format(date);
 }
 
-export function AuditAktivitasView({ rows, error }: { rows: any[], error: string | null }) {
+export function AuditAktivitasView({ rows, error }: { rows: AuditAktivitasItem[], error: string | null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 

@@ -108,7 +108,7 @@ export async function createLmsMateriAction(formData: FormData) {
     judul: formData.get("judul")?.toString() || "",
     deskripsi: formData.get("deskripsi")?.toString() || "",
     fileUrl: formData.get("fileUrl")?.toString() || "",
-    fileType: formData.get("fileType")?.toString() as any,
+    fileType: formData.get("fileType")?.toString() as "pdf" | "doc" | "video" | "link" | "other" | undefined,
   };
 
   try {

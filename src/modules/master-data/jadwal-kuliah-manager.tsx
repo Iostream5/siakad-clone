@@ -52,7 +52,7 @@ function JadwalKuliahFormModal({
         success(item ? "Jadwal berhasil diperbarui" : "Jadwal berhasil ditambahkan");
         onClose();
       } else {
-        error(result.error);
+        error(result.error || "Terjadi kesalahan");
       }
     });
   }
@@ -145,7 +145,7 @@ function DeleteJadwalKuliahModal({ open, onClose, item }: { open: boolean; onClo
         success("Jadwal kuliah berhasil dihapus");
         onClose();
       } else {
-        error(result.error);
+        error(result.error || "Terjadi kesalahan");
       }
     });
   }
