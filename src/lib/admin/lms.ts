@@ -354,3 +354,59 @@ export async function createLmsForumTopik(values: {
   if (error) throw error;
   return data;
 }
+
+export async function getLmsClassesForAdmin(options: { prodiId?: string, tahunAkademikId?: string } = {}) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Client error");
+
+  let query = supabase
+    .from("jadwal_kuliah")
+    .select(`
+      id,
+      nama_kelas,
+      hari,
+      jam_mulai,
+      jam_selesai,
+      ruangan,
+      peserta,
+      mata_kuliah:mata_kuliah_id(nama, kode, sks, prodi_id),
+      tahun_akademik:tahun_akademik_id(nama, is_aktif),
+      dosen:dosen_id(users:user_id(full_name)),
+      materi:lms_materi(count),
+      tugas:lms_tugas(count),
+      forum:lms_forum_topik(count)
+    `);
+
+  if (options.tahunAkademikId) {
+    query = query.eq("tahun_akademik_id", options.tahunAkademikId);
+  } else {
+    // Default to active year if not provided
+    const { data: activeYear } = await supabase
+      .from("tahun_akademik")
+      .select("id")
+      .eq("is_aktif", true)
+      .maybeSingle();
+
+    if (activeYear) {
+        query = query.eq("tahun_akademik_id", activeYear.id);
+    }
+  }
+
+  // NOTE: Supabase PostgREST might not support filtering on inner joined tables directly easily in one query without inner join
+  // For simplicity we fetch all and filter in memory for Prodi if needed, or use inner joins properly
+
+  const { data, error } = await query.order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  let result = data;
+
+  if (options.prodiId) {
+      result = result.filter((item: any) => {
+         const mk = Array.isArray(item.mata_kuliah) ? item.mata_kuliah[0] : item.mata_kuliah;
+         return mk?.prodi_id === options.prodiId;
+      });
+  }
+
+  return result;
+}

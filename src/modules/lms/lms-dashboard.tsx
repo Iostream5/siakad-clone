@@ -14,7 +14,8 @@ import {
   MoreVertical,
   FileText,
   MessageSquare,
-  CheckCircle2
+  CheckCircle2,
+  Settings
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -25,9 +26,10 @@ import { Badge } from "@/components/ui/badge";
 interface LmsDashboardProps {
   role: string;
   initialClasses: any[];
+  stats?: { totalMateri: number, totalTugas: number, totalForum: number } | null;
 }
 
-export function LmsDashboard({ role, initialClasses }: LmsDashboardProps) {
+export function LmsDashboard({ role, initialClasses, stats }: LmsDashboardProps) {
   const [search, setSearch] = useState("");
 
   const filteredClasses = initialClasses.filter((c) => 
@@ -68,7 +70,9 @@ export function LmsDashboard({ role, initialClasses }: LmsDashboardProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="h-8 w-1.5 bg-emerald-600 rounded-full" />
-          <h3 className="text-lg font-black text-slate-900 uppercase tracking-widest">Kelas Aktif Anda</h3>
+          <h3 className="text-lg font-black text-slate-900 uppercase tracking-widest">
+              {role === "Admin" || role === "Prodi" ? "Monitoring Kelas" : "Kelas Aktif Anda"}
+          </h3>
         </div>
         <Badge className="bg-slate-100 text-slate-600 border-slate-200 px-3 py-1 font-bold text-[10px] uppercase tracking-wider rounded-lg">
           Total {filteredClasses.length} Mata Kuliah
@@ -81,7 +85,9 @@ export function LmsDashboard({ role, initialClasses }: LmsDashboardProps) {
             <BookOpen className="h-10 w-10" />
           </div>
           <h3 className="text-xl font-bold text-slate-900 mb-2">Belum ada kelas aktif</h3>
-          <p className="text-slate-500 max-w-xs mx-auto">Anda belum terdaftar di kelas manapun untuk semester ini.</p>
+          <p className="text-slate-500 max-w-xs mx-auto">
+             {role === "Admin" || role === "Prodi" ? "Belum ada kelas yang dibuat untuk semester ini." : "Anda belum terdaftar di kelas manapun untuk semester ini."}
+          </p>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -91,7 +97,7 @@ export function LmsDashboard({ role, initialClasses }: LmsDashboardProps) {
                 <div className="p-6 flex-1">
                   <div className="flex justify-between items-start mb-4">
                     <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 font-black text-[10px] uppercase tracking-tighter rounded-lg px-2">
-                      {item.mata_kuliah?.kode}
+                      {item.mata_kuliah?.kode || "N/A"}
                     </Badge>
                     <button className="text-slate-400 hover:text-slate-600 transition-colors">
                       <MoreVertical className="h-5 w-5" />
@@ -99,7 +105,7 @@ export function LmsDashboard({ role, initialClasses }: LmsDashboardProps) {
                   </div>
                   
                   <h4 className="text-lg font-black text-slate-900 mb-2 leading-tight group-hover:text-emerald-700 transition-colors">
-                    {item.mata_kuliah?.nama}
+                    {item.mata_kuliah?.nama || "Tanpa Nama"}
                   </h4>
                   
                   <div className="space-y-3 mt-6">
@@ -127,19 +133,27 @@ export function LmsDashboard({ role, initialClasses }: LmsDashboardProps) {
                 </div>
                 
                 <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                  <div className="flex -space-x-2">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="h-6 w-6 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-600">
-                        M{i}
+                  {(role === "Admin" || role === "Prodi") ? (
+                      <div className="flex items-center gap-3 text-xs font-medium text-slate-500">
+                         <span title="Materi" className="flex items-center gap-1"><FileText className="h-3 w-3" /> {item.materi?.[0]?.count || 0}</span>
+                         <span title="Tugas" className="flex items-center gap-1"><Layout className="h-3 w-3" /> {item.tugas?.[0]?.count || 0}</span>
+                         <span title="Peserta" className="flex items-center gap-1"><User className="h-3 w-3" /> {item.peserta || 0}</span>
                       </div>
-                    ))}
-                    <div className="h-6 w-6 rounded-full border-2 border-white bg-emerald-500 flex items-center justify-center text-[8px] font-bold text-white">
-                      +12
-                    </div>
-                  </div>
+                  ) : (
+                      <div className="flex -space-x-2">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="h-6 w-6 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[8px] font-bold text-slate-600">
+                            M{i}
+                          </div>
+                        ))}
+                        <div className="h-6 w-6 rounded-full border-2 border-white bg-emerald-500 flex items-center justify-center text-[8px] font-bold text-white">
+                          +12
+                        </div>
+                      </div>
+                  )}
                   
                   <div className="flex items-center gap-1 text-emerald-600 text-xs font-black uppercase tracking-widest">
-                    Buka Kelas <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+                    {(role === "Admin" || role === "Prodi") ? "Pantau Kelas" : "Buka Kelas"} <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
                   </div>
                 </div>
               </Card>
@@ -149,32 +163,61 @@ export function LmsDashboard({ role, initialClasses }: LmsDashboardProps) {
       )}
 
       {/* Quick Stats / Info Footer */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatCard 
-          icon={<FileText className="h-5 w-5 text-blue-600" />}
-          label="Materi Terbaru"
-          value="12 File"
-          bg="bg-blue-50"
-        />
-        <StatCard 
-          icon={<MessageSquare className="h-5 w-5 text-purple-600" />}
-          label="Diskusi Aktif"
-          value="5 Topik"
-          bg="bg-purple-50"
-        />
-        <StatCard 
-          icon={<Layout className="h-5 w-5 text-amber-600" />}
-          label="Tugas Mendatang"
-          value="3 Tugas"
-          bg="bg-amber-50"
-        />
-        <StatCard 
-          icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}
-          label="Kehadiran"
-          value="95%"
-          bg="bg-emerald-50"
-        />
-      </div>
+      {(role === "Admin" || role === "Prodi") && stats ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <StatCard
+              icon={<SchoolIcon className="h-5 w-5 text-indigo-600" />}
+              label="Total Kelas Aktif"
+              value={`${filteredClasses.length} Kelas`}
+              bg="bg-indigo-50"
+            />
+            <StatCard
+              icon={<FileText className="h-5 w-5 text-blue-600" />}
+              label="Total Materi"
+              value={`${stats.totalMateri} File`}
+              bg="bg-blue-50"
+            />
+            <StatCard
+              icon={<Layout className="h-5 w-5 text-amber-600" />}
+              label="Total Tugas"
+              value={`${stats.totalTugas} Tugas`}
+              bg="bg-amber-50"
+            />
+            <StatCard
+              icon={<MessageSquare className="h-5 w-5 text-purple-600" />}
+              label="Total Topik Diskusi"
+              value={`${stats.totalForum} Topik`}
+              bg="bg-purple-50"
+            />
+          </div>
+      ) : (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <StatCard
+              icon={<FileText className="h-5 w-5 text-blue-600" />}
+              label="Materi Terbaru"
+              value="12 File"
+              bg="bg-blue-50"
+            />
+            <StatCard
+              icon={<MessageSquare className="h-5 w-5 text-purple-600" />}
+              label="Diskusi Aktif"
+              value="5 Topik"
+              bg="bg-purple-50"
+            />
+            <StatCard
+              icon={<Layout className="h-5 w-5 text-amber-600" />}
+              label="Tugas Mendatang"
+              value="3 Tugas"
+              bg="bg-amber-50"
+            />
+            <StatCard
+              icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}
+              label="Kehadiran"
+              value="95%"
+              bg="bg-emerald-50"
+            />
+          </div>
+      )}
     </div>
   );
 }

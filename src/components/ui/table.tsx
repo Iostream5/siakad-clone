@@ -1,10 +1,12 @@
-import type { HTMLAttributes, TableHTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from "react";
-
+import { HTMLAttributes, TableHTMLAttributes, TdHTMLAttributes, ThHTMLAttributes, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
-export function Table({ className, ...props }: TableHTMLAttributes<HTMLTableElement>) {
-  return <table className={cn("w-full text-left text-sm", className)} {...props} />;
-}
+export const Table = forwardRef<HTMLTableElement, TableHTMLAttributes<HTMLTableElement>>(
+  ({ className, ...props }, ref) => (
+    <table ref={ref} className={cn("w-full text-left text-sm", className)} {...props} />
+  )
+);
+Table.displayName = "Table";
 
 export function THead({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
   return <thead className={cn("text-xs uppercase tracking-[0.18em] text-slate-500", className)} {...props} />;
