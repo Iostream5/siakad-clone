@@ -95,6 +95,25 @@ export async function createCashFlowAction(formData: FormData) {
   };
 
   try {
+    // Check for idempotency locally based on title and nominal for the day
+    const supabase = await createAdminClient();
+    if (supabase) {
+      const today = new Date(values.tanggal || new Date().toISOString()).toISOString().split('T')[0];
+      const { data: existingCashFlow } = await supabase
+        .from("arus_kas")
+        .select("id")
+        .eq("judul", values.judul)
+        .eq("nominal", values.nominal)
+        .eq("tipe", values.tipe)
+        .gte("tanggal", `${today}T00:00:00Z`)
+        .lte("tanggal", `${today}T23:59:59Z`)
+        .limit(1);
+
+      if (existingCashFlow && existingCashFlow.length > 0) {
+        return redirect(withToastParams("/dashboard/keuangan#cashflow", { variant: "error", title: "Transaksi serupa sudah ada untuk hari ini" }));
+      }
+    }
+
     await createCashFlow(values);
     
     // Log Activity
