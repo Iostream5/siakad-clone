@@ -146,6 +146,89 @@ export async function loginAction(_: LoginActionState, formData: FormData) {
   redirect(getDefaultRolePath(sessionUser.role));
 }
 
+export type ForgotPasswordActionState = {
+  success: boolean;
+  message: string;
+  error: string | null;
+};
+
+export async function forgotPasswordAction(_: ForgotPasswordActionState, formData: FormData) {
+  const email = formData.get("email");
+  if (typeof email !== "string" || !email.includes("@")) {
+    return { success: false, message: "", error: "Email tidak valid" };
+  }
+
+  const supabase = await createClient();
+  const admin = createAdminClient();
+
+  if (supabase) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/login/reset-password`,
+    });
+
+    if (error) {
+      return { success: false, message: "", error: "Gagal mengirim email reset password" };
+    }
+
+    void logAuthEvent({
+      adminAvailable: admin,
+      identifier: email,
+      action: "LOGIN_SUCCESS",
+      message: "Request reset password berhasil",
+    });
+
+    return { success: true, message: "Link reset password telah dikirim ke email Anda", error: null };
+  }
+
+  return { success: false, message: "", error: "Sistem auth tidak tersedia" };
+}
+
+export type ResetPasswordActionState = {
+  success: boolean;
+  message: string;
+  error: string | null;
+};
+
+export async function resetPasswordAction(_: ResetPasswordActionState, formData: FormData) {
+  const password = formData.get("password");
+  const confirmPassword = formData.get("confirmPassword");
+
+  if (typeof password !== "string" || password.length < 8) {
+    return { success: false, message: "", error: "Password minimal 8 karakter" };
+  }
+
+  if (password !== confirmPassword) {
+    return { success: false, message: "", error: "Konfirmasi password tidak cocok" };
+  }
+
+  const supabase = await createClient();
+  const admin = createAdminClient();
+
+  if (supabase) {
+    const { data: { user }, error } = await supabase.auth.updateUser({
+      password,
+    });
+
+    if (error) {
+      return { success: false, message: "", error: "Gagal reset password" };
+    }
+
+    if (user) {
+      void logAuthEvent({
+        adminAvailable: admin,
+        identifier: user.email || user.id,
+        action: "LOGIN_SUCCESS",
+        message: "Password berhasil diubah",
+        userId: user.id,
+      });
+    }
+
+    return { success: true, message: "Password berhasil diubah", error: null };
+  }
+
+  return { success: false, message: "", error: "Sistem auth tidak tersedia" };
+}
+
 export async function logoutAction() {
   const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAME);

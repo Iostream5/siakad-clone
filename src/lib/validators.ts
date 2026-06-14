@@ -5,6 +5,18 @@ export const loginSchema = z.object({
   password: z.string().min(6, "Password minimal 6 karakter"),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Format email tidak valid"),
+});
+
+export const resetPasswordSchema = z.object({
+  password: z.string().min(8, "Password minimal 8 karakter"),
+  confirmPassword: z.string().min(8, "Konfirmasi password minimal 8 karakter"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Password dan konfirmasi password harus sama",
+  path: ["confirmPassword"],
+});
+
 export const pmbRegistrationSchema = z.object({
   fullName: z.string().min(3, "Nama lengkap wajib diisi"),
   email: z.email("Email tidak valid"),
