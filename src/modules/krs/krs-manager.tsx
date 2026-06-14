@@ -1,15 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { BookOpen, CheckCircle2, Clock, Send, ShieldCheck, XCircle, UserCheck, Eye, Search } from "lucide-react";
+import { useState, useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { BookOpen, Search, UserCheck, Eye, Send, AlertCircle } from "lucide-react";
 
-import { submitKrsAction, approveKrsAction } from "@/actions/krs";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { approveKrsAction, submitKrsAction } from "@/actions/krs";
 
 const initialState = { success: false, message: null };
 
@@ -46,7 +46,11 @@ function ApproveKrsModal({ open, onClose, item }: any) {
   if (!item) return null;
 
   return (
-    <ModalShell open={open} onClose={onClose} title="Validasi KRS" description="Tinjau dan beri persetujuan pada KRS mahasiswa">
+    <ModalShell
+       open={open}
+       onClose={onClose}
+       title="Validasi KRS"
+       description="Tinjau dan beri persetujuan pada KRS mahasiswa">
        <div className="space-y-4">
           <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100">
              <div className="grid grid-cols-2 gap-4">
@@ -65,7 +69,6 @@ function ApproveKrsModal({ open, onClose, item }: any) {
              <Table>
                 <THead><TR><TH>Kode</TH><TH>Mata Kuliah</TH><TH>SKS</TH></TR></THead>
                 <TBody>
-                   {/* We might need to fetch details for this student if not provided in item */}
                    <TR><TD colSpan={3} className="text-center text-xs py-4 text-slate-400 italic">Total SKS yang diajukan: {item.total_sks} SKS</TD></TR>
                 </TBody>
              </Table>
@@ -101,8 +104,8 @@ export function KrsManager({
   const [search, setSearch] = useState("");
   const [validatingItem, setValidatingItem] = useState(null);
 
-  const toggleJadwal = (id: string) => {
-    if (currentKrs?.status === "Disetujui") return;
+  const toggleJadwal = (id: string, isDisabled: boolean) => {
+    if (currentKrs?.status === "Disetujui" || isDisabled) return;
     setSelectedJadwal(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
@@ -111,6 +114,8 @@ export function KrsManager({
   const totalSks = availableJadwal
     .filter((j: any) => selectedJadwal.includes(j.id))
     .reduce((acc: number, curr: any) => acc + (curr.mata_kuliah?.sks || 0), 0);
+
+  const maxSks = 24; // This could come from user data/GPA
 
   if (user.role === "Mahasiswa") {
     return (
@@ -133,9 +138,18 @@ export function KrsManager({
            </Card>
            <Card className="p-4 bg-white border-slate-200">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Beban SKS</p>
-              <p className="mt-1 font-bold text-slate-900">{totalSks} / 24 SKS</p>
+              <p className={`mt-1 font-bold ${totalSks > maxSks ? 'text-rose-600' : 'text-slate-900'}`}>
+                 {totalSks} / {maxSks} SKS
+              </p>
            </Card>
         </div>
+
+        {totalSks > maxSks && (
+           <div className="p-4 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl flex items-center gap-3">
+              <AlertCircle className="h-5 w-5" />
+              <p className="text-sm font-medium">Total SKS Anda melebihi batas maksimal yang diizinkan. Silakan kurangi beberapa mata kuliah.</p>
+           </div>
+        )}
 
         <Card className="overflow-hidden">
           <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -148,7 +162,7 @@ export function KrsManager({
                    {selectedJadwal.map(id => (
                      <input key={id} type="hidden" name="jadwalIds" value={id} />
                    ))}
-                   <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 shadow-lg shadow-cyan-100">
+                   <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 shadow-lg shadow-cyan-100" disabled={totalSks > maxSks || selectedJadwal.length === 0}>
                       <Send className="mr-2 h-4 w-4" /> Ajukan KRS
                    </Button>
                 </form>
@@ -168,36 +182,46 @@ export function KrsManager({
                 </TR>
               </THead>
               <TBody>
-                {availableJadwal.map((item: any) => (
-                  <TR 
-                    key={item.id} 
-                    className={`cursor-pointer transition-colors ${selectedJadwal.includes(item.id) ? 'bg-cyan-50/50' : ''}`}
-                    onClick={() => toggleJadwal(item.id)}
-                  >
-                    <TD>
-                       <input 
-                         type="checkbox" 
-                         checked={selectedJadwal.includes(item.id)}
-                         readOnly
-                         className="h-4 w-4 rounded border-slate-300 text-cyan-600"
-                       />
-                    </TD>
-                    <TD>
-                      <p className="font-semibold text-slate-900">{item.mata_kuliah?.nama}</p>
-                      <p className="text-xs text-slate-500">{item.mata_kuliah?.kode}</p>
-                    </TD>
-                    <TD className="text-sm font-medium">{item.mata_kuliah?.sks} SKS</TD>
-                    <TD className="text-sm text-slate-600">{item.dosen?.users?.full_name}</TD>
-                    <TD className="text-xs">
-                       <p className="font-medium text-slate-700">{item.hari}</p>
-                       <p className="text-slate-500">{item.jam_mulai} - {item.jam_selesai}</p>
-                       <p className="text-slate-400">R: {item.ruangan}</p>
-                    </TD>
-                    <TD className="text-xs font-mono">
-                       {item.peserta} / {item.kapasitas}
-                    </TD>
-                  </TR>
-                ))}
+                {availableJadwal.map((item: any) => {
+                  const isSelected = selectedJadwal.includes(item.id);
+                  const isFull = item.peserta >= item.kapasitas;
+                  const isDisabled = (isFull && !isSelected) || currentKrs?.status === "Disetujui";
+
+                  return (
+                      <TR
+                        key={item.id}
+                        className={`transition-colors ${isSelected ? 'bg-cyan-50/50' : ''} ${isDisabled && !isSelected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-slate-50'}`}
+                        onClick={() => toggleJadwal(item.id, isDisabled)}
+                      >
+                        <TD>
+                           <input
+                             type="checkbox"
+                             checked={isSelected}
+                             disabled={isDisabled}
+                             onChange={() => {}}
+                             className="h-4 w-4 rounded border-slate-300 text-cyan-600"
+                           />
+                        </TD>
+                        <TD>
+                          <p className="font-semibold text-slate-900">{item.mata_kuliah?.nama}</p>
+                          <p className="text-xs text-slate-500">{item.mata_kuliah?.kode} {item.mata_kuliah?.prasyarat_mk_id && <span className="ml-2 text-[10px] text-amber-600 font-medium px-1 bg-amber-50 rounded">Ada Prasyarat</span>}</p>
+                        </TD>
+                        <TD className="text-sm font-medium">{item.mata_kuliah?.sks} SKS</TD>
+                        <TD className="text-sm text-slate-600">{item.dosen?.users?.full_name}</TD>
+                        <TD className="text-xs">
+                           <p className="font-medium text-slate-700">{item.hari}</p>
+                           <p className="text-slate-500">{item.jam_mulai} - {item.jam_selesai}</p>
+                           <p className="text-slate-400">R: {item.ruangan}</p>
+                        </TD>
+                        <TD className="text-xs font-mono">
+                           <span className={isFull ? "text-rose-600 font-bold" : ""}>
+                             {item.peserta} / {item.kapasitas}
+                           </span>
+                           {isFull && <p className="text-[10px] text-rose-500">Penuh</p>}
+                        </TD>
+                      </TR>
+                  )
+                })}
               </TBody>
             </Table>
           </div>

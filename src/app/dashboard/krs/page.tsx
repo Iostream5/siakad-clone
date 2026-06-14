@@ -6,6 +6,7 @@ import { getDosenIdByUserId } from "@/lib/admin/dosen";
 import { createAdminClient } from "@/supabase/admin";
 import { requireAuthorizedUser } from "@/lib/auth";
 import { KrsManager } from "@/modules/krs/krs-manager";
+import { WeeklySchedule } from "@/modules/krs/weekly-schedule";
 
 export default async function KrsPage() {
   await connection();
@@ -59,8 +60,18 @@ export default async function KrsPage() {
 
   const availableJadwal = await getAvailableJadwal(activeYear.id);
 
+  // Extract approved schedule items for the student
+  let approvedSchedules: any[] = [];
+  if (user.role === "Mahasiswa" && currentKrs && currentKrs.status === "Disetujui") {
+      approvedSchedules = currentKrs.krs_detail?.map((d: any) => d.jadwal).filter(Boolean) || [];
+  }
+
   return (
     <div className="space-y-6">
+      {user.role === "Mahasiswa" && approvedSchedules.length > 0 && (
+         <WeeklySchedule scheduleItems={approvedSchedules} />
+      )}
+
       <KrsManager 
         availableJadwal={availableJadwal}
         currentKrs={currentKrs}

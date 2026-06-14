@@ -18,6 +18,7 @@ export type JadwalRow = {
     nama: string;
     sks: number;
     semester: number;
+    prasyarat_mk_id: string | null;
   };
   dosen: {
     users: {
@@ -28,7 +29,9 @@ export type JadwalRow = {
 
 type JadwalSksRow = {
   id: string;
-  mata_kuliah: { sks: number } | Array<{ sks: number }> | null;
+  peserta: number;
+  kapasitas: number;
+  mata_kuliah: { sks: number, prasyarat_mk_id: string | null } | Array<{ sks: number, prasyarat_mk_id: string | null }> | null;
 };
 
 function getRelationObject<T>(value: T | T[] | null | undefined): T | null {
@@ -47,7 +50,7 @@ export async function getAvailableJadwal(tahunAkademikId: string) {
     .from("jadwal_kuliah")
     .select(`
       *,
-      mata_kuliah:mata_kuliah_id(id, kode, nama, sks, semester, prodi_id),
+      mata_kuliah:mata_kuliah_id(id, kode, nama, sks, semester, prodi_id, prasyarat_mk_id),
       dosen:dosen_id(users:user_id(full_name))
     `)
     .eq("tahun_akademik_id", tahunAkademikId);
@@ -92,10 +95,10 @@ export async function submitKrs(mahasiswaId: string, tahunAkademikId: string, ja
 
   const uniqueJadwalIds = Array.from(new Set(jadwalIds));
 
-  // Calculate total SKS
+  // 1. Fetch selected jadwals
   const { data: jadwals, error: jadwalError } = await supabase
     .from("jadwal_kuliah")
-    .select("id, mata_kuliah:mata_kuliah_id(sks)")
+    .select("id, peserta, kapasitas, mata_kuliah:mata_kuliah_id(sks, prasyarat_mk_id)")
     .eq("tahun_akademik_id", tahunAkademikId)
     .in("id", uniqueJadwalIds);
 
@@ -104,12 +107,60 @@ export async function submitKrs(mahasiswaId: string, tahunAkademikId: string, ja
     throw new Error("Pilihan jadwal tidak valid untuk tahun akademik ini.");
   }
 
-  const totalSks = ((jadwals ?? []) as JadwalSksRow[]).reduce((acc, curr) => {
-    const mataKuliah = getRelationObject(curr.mata_kuliah);
-    return acc + (Number(mataKuliah?.sks) || 0);
-  }, 0);
+  let totalSks = 0;
 
-  // 1. Upsert head KRS
+  // 2. Validate Capacities and collect SKS and Prasyarat MK IDs
+  const prasyaratIdsToCheck = new Set<string>();
+
+  for (const j of (jadwals as unknown as JadwalSksRow[])) {
+      if (j.peserta >= j.kapasitas) {
+          throw new Error("Terdapat mata kuliah yang kelasnya sudah penuh.");
+      }
+
+      const mk = getRelationObject(j.mata_kuliah);
+      if (mk) {
+          totalSks += Number(mk.sks) || 0;
+          if (mk.prasyarat_mk_id) {
+              prasyaratIdsToCheck.add(mk.prasyarat_mk_id);
+          }
+      }
+  }
+
+  // 3. Validate Maksimal SKS (Hardcoded limit 24 for now)
+  const MAX_SKS = 24;
+  if (totalSks > MAX_SKS) {
+      throw new Error(`Total SKS (${totalSks}) melebihi batas maksimal (${MAX_SKS} SKS).`);
+  }
+
+  // 4. Validate Prerequisite Courses (Prasyarat)
+  if (prasyaratIdsToCheck.size > 0) {
+      // Fetch passed courses by student
+      const { data: passedGrades, error: gradesError } = await supabase
+          .from("nilai_akhir")
+          .select(`
+             nilai_huruf,
+             jadwal:jadwal_id!inner(mata_kuliah_id)
+          `)
+          .eq("mahasiswa_id", mahasiswaId)
+          .not("nilai_huruf", "in", '("D","E")') // assuming A,B,C are passing grades
+          .not("published_at", "is", null);
+
+      if (gradesError) throw gradesError;
+
+      const passedMkIds = new Set();
+      (passedGrades || []).forEach(g => {
+          const j = Array.isArray(g.jadwal) ? g.jadwal[0] : g.jadwal;
+          if (j && j.mata_kuliah_id) passedMkIds.add(j.mata_kuliah_id);
+      });
+
+      for (const reqId of prasyaratIdsToCheck) {
+          if (!passedMkIds.has(reqId)) {
+               throw new Error("Anda belum lulus mata kuliah prasyarat untuk beberapa mata kuliah yang dipilih.");
+          }
+      }
+  }
+
+  // 5. Upsert head KRS
   const { data: krsHead, error: headError } = await supabase
     .from("krs_header")
     .upsert({
@@ -124,10 +175,10 @@ export async function submitKrs(mahasiswaId: string, tahunAkademikId: string, ja
 
   if (headError) throw headError;
 
-  // 2. Clear old details
+  // 6. Clear old details
   await supabase.from("krs_detail").delete().eq("id_krs_header", krsHead.id);
 
-  // 3. Insert new details
+  // 7. Insert new details
   const details = uniqueJadwalIds.map(id => ({
     id_krs_header: krsHead.id,
     id_jadwal: id
@@ -185,6 +236,11 @@ export async function updateKrsStatus(krsId: string, status: "Disetujui" | "Dito
     .eq("id", krsId);
 
   if (error) throw error;
+
+  // NOTE: If status is 'Disetujui', we might need to increment 'peserta' on jadwal_kuliah,
+  // but it usually better to calculate peserta directly from krs_detail dynamically
+  // or use database triggers to avoid consistency issues.
+
   return { success: true };
 }
 
