@@ -105,6 +105,7 @@ export const sidebarItems: SidebarItem[] = [
       { key: "master-data.jadwal-kuliah", href: "/dashboard/master-data/jadwal-kuliah", label: "Jadwal Kuliah", roles: ["Admin", "Prodi"] },
       { key: "master-data.dosen", href: "/dashboard/master-data/dosen", label: "Dosen" },
       { key: "master-data.mahasiswa", href: "/dashboard/master-data/mahasiswa", label: "Mahasiswa" },
+      { key: "master-data.gedung", href: "/dashboard/master-data/gedung", label: "Gedung" },
       { key: "master-data.ruangan", href: "/dashboard/master-data/ruangan", label: "Ruangan" },
       { key: "master-data.pengguna", href: "/dashboard/master-data/pengguna", label: "Pengguna" },
     ],

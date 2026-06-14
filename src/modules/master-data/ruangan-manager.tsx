@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 
 export function RuanganManager({ gedungs, ruanganData }: any) {
   const [activeTab, setActiveTab] = useState<"gedung" | "ruangan">("ruangan");
+
+
   const [search, setSearch] = useState("");
   const [editingItem, setEditingItem] = useState<any>(null);
 
@@ -173,6 +175,7 @@ export function RuanganManager({ gedungs, ruanganData }: any) {
                    />
                 </div>
                 <div className="flex items-center gap-3 ml-4">
+
                    <div className="h-8 w-[1px] bg-slate-200 hidden md:block"></div>
                    <p className="text-xs font-medium text-slate-500 hidden md:block">
                       Total: <span className="text-slate-900">{activeTab === 'ruangan' ? filteredRuangan.length : filteredGedung.length}</span>
@@ -252,6 +255,7 @@ export function RuanganManager({ gedungs, ruanganData }: any) {
         </div>
 
       </div>
-    </div>
+
+          </div>
   );
 }

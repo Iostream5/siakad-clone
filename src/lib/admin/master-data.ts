@@ -184,6 +184,7 @@ export type MasterDataSnapshot = {
     mahasiswa: number;
     kelas: number;
     ruangan: number;
+    gedung: number;
     tahunAkademik: number;
     kurikulum: number;
   };
@@ -197,6 +198,7 @@ export type MasterDataSnapshot = {
   users: UserRow[];
   dosen: DosenRow[];
   mahasiswa: MahasiswaRow[];
+  gedung: any[];
   error: string | null;
 };
 
@@ -211,6 +213,7 @@ const emptySnapshot: MasterDataSnapshot = {
     mahasiswa: 0,
     kelas: 0,
     ruangan: 0,
+    gedung: 0,
     tahunAkademik: 0,
     kurikulum: 0,
   },
@@ -224,6 +227,7 @@ const emptySnapshot: MasterDataSnapshot = {
   users: [],
   dosen: [],
   mahasiswa: [],
+  gedung: [],
   error: null,
 };
 
@@ -247,6 +251,7 @@ export async function getMasterDataSnapshot(): Promise<MasterDataSnapshot> {
     mahasiswaCountResult,
     kelasCountResult,
     ruanganCountResult,
+    gedungCountResult,
     tahunAkademikCountResult,
     kurikulumCountResult,
     kampusResult,
@@ -259,6 +264,7 @@ export async function getMasterDataSnapshot(): Promise<MasterDataSnapshot> {
     usersResult,
     dosenResult,
     mahasiswaResult,
+    gedungResult,
   ] = await Promise.all([
     supabase.from("users").select("id", { count: "exact", head: true }),
     supabase.from("kampus").select("id", { count: "exact", head: true }),
@@ -269,6 +275,7 @@ export async function getMasterDataSnapshot(): Promise<MasterDataSnapshot> {
     supabase.from("mahasiswa").select("id", { count: "exact", head: true }),
     supabase.from("kelas").select("id", { count: "exact", head: true }),
     supabase.from("ruangan").select("id", { count: "exact", head: true }),
+    supabase.from("gedung").select("id", { count: "exact", head: true }),
     supabase.from("tahun_akademik").select("id", { count: "exact", head: true }),
     supabase.from("kurikulum").select("id", { count: "exact", head: true }),
     supabase
@@ -329,6 +336,12 @@ export async function getMasterDataSnapshot(): Promise<MasterDataSnapshot> {
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(8),
+    supabase
+      .from("gedung")
+      .select("id, kode, nama, jumlah_lantai, is_active, updated_at")
+      .is("deleted_at", null)
+      .order("updated_at", { ascending: false })
+      .limit(8),
   ]);
 
   const errors = [
@@ -353,6 +366,7 @@ export async function getMasterDataSnapshot(): Promise<MasterDataSnapshot> {
     usersResult.error,
     dosenResult.error,
     mahasiswaResult.error,
+    gedungResult.error,
   ].filter(Boolean);
 
   const dosenRows = ((dosenResult.data ?? []) as DosenQueryRow[]).map((item) => ({
@@ -396,6 +410,7 @@ export async function getMasterDataSnapshot(): Promise<MasterDataSnapshot> {
       mahasiswa: mahasiswaCountResult.count ?? 0,
       kelas: kelasCountResult.count ?? 0,
       ruangan: ruanganCountResult.count ?? 0,
+      gedung: gedungCountResult.count ?? 0,
       tahunAkademik: tahunAkademikCountResult.count ?? 0,
       kurikulum: kurikulumCountResult.count ?? 0,
     },
@@ -429,6 +444,7 @@ export async function getMasterDataSnapshot(): Promise<MasterDataSnapshot> {
     users: (usersResult.data ?? []) as UserRow[],
     dosen: dosenRows,
     mahasiswa: mahasiswaRows,
+    gedung: (gedungResult.data ?? []) as any[],
     error: errors[0]?.message ?? null,
   };
 }

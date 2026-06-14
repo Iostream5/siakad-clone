@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import Link from "next/link";
 import { ArrowRight, LockKeyhole, RefreshCcw, ShieldCheck, UserRound } from "lucide-react";
 
 import { loginAction, type LoginActionState } from "@/actions/auth";
@@ -112,7 +113,12 @@ export function LoginForm() {
         </div>
       </div>
       <div>
-        <label className="mb-1.5 block text-xs font-medium text-slate-700">Password</label>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-xs font-medium text-slate-700">Password</label>
+          <Link href="/login/forgot-password" className="text-xs font-medium text-[var(--primary)] hover:underline">
+            Lupa password?
+          </Link>
+        </div>
         <div className="relative">
           <LockKeyhole className="pointer-events-none absolute left-3 top-3 h-3.5 w-3.5 text-slate-400" />
           <Input

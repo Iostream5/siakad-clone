@@ -14,6 +14,8 @@ import {
   PenggunaSection,
   ProgramStudiSection,
   TahunAkademikSection,
+  GedungSection,
+  FakultasSection,
 } from "@/modules/master-data/sections";
 
 export default async function MasterDataPage() {
@@ -34,6 +36,8 @@ export default async function MasterDataPage() {
       ) : null}
 
       <KampusSection snapshot={snapshot} />
+      <FakultasSection snapshot={snapshot} />
+      <GedungSection snapshot={snapshot} />
       <ProgramStudiSection snapshot={snapshot} />
       <KelasSection snapshot={snapshot} />
       <MataKuliahSection snapshot={snapshot} />

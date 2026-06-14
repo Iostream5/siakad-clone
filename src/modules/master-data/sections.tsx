@@ -96,6 +96,65 @@ export function MasterDataQuickLinks({ snapshot }: { snapshot: MasterDataSnapsho
   );
 }
 
+
+export function FakultasSection({ snapshot }: { snapshot: MasterDataSnapshot }) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm text-slate-500">Fakultas</p>
+          <h3 className="mt-1 text-xl font-semibold text-slate-900">Data fakultas kampus</h3>
+        </div>
+        <Badge>{snapshot.counts.fakultas || 0} fakultas</Badge>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {(snapshot.fakultas || []).map((item: any) => (
+          <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-semibold text-slate-900">{item.nama}</p>
+              {item.is_active ? <Badge>Aktif</Badge> : <Badge variant="secondary">Nonaktif</Badge>}
+            </div>
+            <p className="mt-2 text-sm text-slate-600">{item.kode}</p>
+            <p className="mt-1 text-sm text-slate-500">
+              {item.dekan ? `Dekan: ${item.dekan}` : "-"}
+            </p>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+export function GedungSection({ snapshot }: { snapshot: MasterDataSnapshot }) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm text-slate-500">Gedung</p>
+          <h3 className="mt-1 text-xl font-semibold text-slate-900">Data gedung kampus</h3>
+        </div>
+        <Badge>{snapshot.counts.gedung || 0} gedung</Badge>
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {(snapshot.gedung || []).map((item: any) => (
+          <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-semibold text-slate-900">{item.nama}</p>
+              {item.is_active ? <Badge>Aktif</Badge> : <Badge variant="secondary">Nonaktif</Badge>}
+            </div>
+            <p className="mt-2 text-sm text-slate-600">{item.kode}</p>
+            <p className="mt-1 text-sm text-slate-500">
+              {item.jumlah_lantai} Lantai
+            </p>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export function ProgramStudiSection({ snapshot }: { snapshot: MasterDataSnapshot }) {
   return (
     <Card className="overflow-hidden">

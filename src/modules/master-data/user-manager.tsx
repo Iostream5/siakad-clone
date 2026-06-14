@@ -135,6 +135,8 @@ export function UserManager({ items, totalItems, totalPages, currentPage, query 
   const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(query);
+
+
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<UserItem | null>(null);
   const [deletingItem, setDeletingItem] = useState<UserItem | null>(null);

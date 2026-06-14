@@ -73,6 +73,8 @@ export function StudyProgramsManager({ items, totalItems, totalPages, currentPag
   const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(query);
+
+
   const [editingItem, setEditingItem] = useState<any>(null);
   const [deletingItem, setDeletingItem] = useState<any>(null);
 
