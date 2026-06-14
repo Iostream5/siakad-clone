@@ -71,3 +71,21 @@ export async function markNotificationRead(notificationId: string, userId: strin
     throw new Error(error.message);
   }
 }
+
+export async function markAllNotificationsRead(userId: string) {
+  const supabase = createAdminClient();
+
+  if (!supabase) {
+    throw new Error("Supabase admin client belum dikonfigurasi.");
+  }
+
+  const { error } = await supabase
+    .from("notifikasi")
+    .update({ is_read: true })
+    .eq("id_user", userId)
+    .eq("is_read", false);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
