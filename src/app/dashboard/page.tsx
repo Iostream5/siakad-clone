@@ -1,5 +1,9 @@
 import { DashboardOverview } from "@/modules/dashboard/overview";
 import { PimpinanOverview } from "@/modules/dashboard/pimpinan-overview";
+import { MahasiswaDashboard } from "@/modules/dashboard/mahasiswa-dashboard";
+import { DosenDashboard } from "@/modules/dashboard/dosen-dashboard";
+import { KeuanganDashboard } from "@/modules/dashboard/keuangan-dashboard";
+import { ProdiDashboard } from "@/modules/dashboard/prodi-dashboard";
 import { RecentActivityFeed } from "@/modules/dashboard/recent-activity";
 import { requireAuthorizedUser } from "@/lib/auth";
 import { getActiveAnnouncements } from "@/lib/admin/announcements";
@@ -36,12 +40,44 @@ export default async function DashboardPage() {
     );
   }
 
-  // Default view for other roles
   const [announcements, snapshot] = await Promise.all([
     withTimeout(getActiveAnnouncements(user.role), DASHBOARD_DATA_TIMEOUT_MS),
     withTimeout(getMasterDataSnapshot(), DASHBOARD_DATA_TIMEOUT_MS),
   ]);
 
+  if (user.role === "Mahasiswa") {
+    return (
+      <div className="space-y-6">
+        <MahasiswaDashboard user={user} stats={snapshot?.counts} />
+      </div>
+    );
+  }
+
+  if (user.role === "Dosen") {
+    return (
+      <div className="space-y-6">
+        <DosenDashboard user={user} stats={snapshot?.counts} />
+      </div>
+    );
+  }
+
+  if (user.role === "Keuangan") {
+    return (
+      <div className="space-y-6">
+        <KeuanganDashboard user={user} stats={snapshot?.counts} />
+      </div>
+    );
+  }
+
+  if (user.role === "Prodi") {
+    return (
+      <div className="space-y-6">
+        <ProdiDashboard user={user} stats={snapshot?.counts} />
+      </div>
+    );
+  }
+
+  // Default view for Admin and others
   return (
     <div className="space-y-6">
       <DashboardOverview 

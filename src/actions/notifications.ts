@@ -35,3 +35,23 @@ export async function markNotificationReadAction(formData: FormData) {
     );
   }
 }
+
+export async function markAllNotificationsReadAction(formData: FormData) {
+  const user = await requireUser();
+  const redirectTo = `${formData.get("redirectTo") ?? ""}`.trim() || "/dashboard/notifikasi";
+
+  try {
+    const { markAllNotificationsRead } = await import("@/lib/admin/notifications");
+    await markAllNotificationsRead(user.id);
+    revalidatePath("/dashboard", "layout");
+    redirect(redirectTo);
+  } catch (error) {
+    redirect(
+      withToastParams(redirectTo, {
+        variant: "error",
+        title: "Gagal menandai notifikasi",
+        message: error instanceof Error ? error.message : "Coba ulangi sebentar lagi.",
+      }),
+    );
+  }
+}
