@@ -14,6 +14,21 @@ const supportItems = [
 export default async function PmbRegistrationPage() {
   const programOptions = await getStudyProgramList();
 
+  // Placeholder for open registration period check
+  const isPmbOpen = true; // TODO: Query an actual settings table to determine if PMB is open
+
+  if (!isPmbOpen) {
+    return (
+      <main className="relative min-h-screen px-5 py-8 flex flex-col items-center justify-center bg-slate-50 text-center">
+        <h1 className="text-3xl font-semibold text-slate-900">Pendaftaran PMB Ditutup</h1>
+        <p className="mt-2 text-slate-600 max-w-md">Saat ini periode pendaftaran mahasiswa baru telah ditutup. Silakan kembali ke halaman utama untuk informasi lebih lanjut.</p>
+        <Link href="/pmb" className="mt-6 inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 font-medium text-white transition hover:bg-slate-800">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Kembali ke Beranda
+        </Link>
+      </main>
+    );
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden px-5 py-8">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(15,118,110,0.2),transparent_24%),linear-gradient(180deg,#f8fbf9_0%,#eef5f1_100%)]" />
@@ -22,6 +37,12 @@ export default async function PmbRegistrationPage() {
           <ArrowLeft className="h-4 w-4" />
           Kembali ke halaman PMB
         </Link>
+
+        {(!programOptions || programOptions.length === 0) && (
+          <Card className="border-red-200 bg-red-50 p-6 mb-6">
+            <p className="text-sm font-medium text-red-800">Perhatian: Saat ini belum ada program studi yang tersedia. Silakan hubungi panitia PMB.</p>
+          </Card>
+        )}
 
         <div className="grid gap-6 lg:grid-cols-[0.88fr_1.12fr]">
           <Card className="border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,255,255,0.7))] p-6 shadow-[0_24px_60px_rgba(15,23,42,0.08)]">

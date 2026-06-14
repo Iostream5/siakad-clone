@@ -273,6 +273,36 @@ export function PmbManager({
     [items],
   );
 
+  const exportToExcel = () => {
+    const escapeCsv = (str: string | null) => {
+      if (!str) return '""';
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+
+    const csvContent = "data:text/csv;charset=utf-8,"
+      + "Nomor Pendaftaran,Nama Lengkap,Email,No HP,Jalur,Prodi Pilihan,Status Pendaftaran,Status Seleksi\n"
+      + items.map(item => {
+          return [
+            escapeCsv(item.nomor_pendaftaran),
+            escapeCsv(item.nama_lengkap),
+            escapeCsv(item.email),
+            escapeCsv(item.no_hp || "-"),
+            escapeCsv(item.jalur_pendaftaran || "-"),
+            escapeCsv(item.program_studi?.nama || "-"),
+            escapeCsv(item.status_pendaftaran),
+            escapeCsv(item.status_seleksi)
+          ].join(",");
+        }).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "data-pmb.csv");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+
   if (activeTab === "tarif") {
     return (
       <div className="space-y-6">
@@ -313,6 +343,11 @@ export function PmbManager({
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
+          {(userRole === "Admin" || userRole === "Staff") && (
+            <Button variant="outline" size="sm" onClick={exportToExcel} className="h-10 rounded-lg border-2 border-slate-100 bg-white">
+              <FileCheck2 className="mr-2 h-4 w-4" /> Export Data
+            </Button>
+          )}
         </div>
 
         <div className="overflow-x-auto">
