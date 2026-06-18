@@ -29,7 +29,7 @@ function toNetworkLoginMessage(error: unknown) {
 async function logAuthEvent(params: {
   adminAvailable: ReturnType<typeof createAdminClient>;
   identifier: string;
-  action: "LOGIN_SUCCESS" | "LOGIN_FAILED";
+  action: "LOGIN_SUCCESS" | "LOGIN_FAILED" | "FORGOT_PASSWORD" | "RESET_PASSWORD";
   message: string;
   userId?: string | null;
 }) {
@@ -173,7 +173,7 @@ export async function forgotPasswordAction(_: ForgotPasswordActionState, formDat
     void logAuthEvent({
       adminAvailable: admin,
       identifier: email,
-      action: "LOGIN_SUCCESS",
+      action: "FORGOT_PASSWORD",
       message: "Request reset password berhasil",
     });
 
@@ -217,7 +217,7 @@ export async function resetPasswordAction(_: ResetPasswordActionState, formData:
       void logAuthEvent({
         adminAvailable: admin,
         identifier: user.email || user.id,
-        action: "LOGIN_SUCCESS",
+        action: "RESET_PASSWORD",
         message: "Password berhasil diubah",
         userId: user.id,
       });

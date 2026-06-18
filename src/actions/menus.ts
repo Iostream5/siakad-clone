@@ -4,12 +4,13 @@ import { revalidatePath } from "next/cache";
 
 import { deleteMenu, moveMenu, saveMenu } from "@/lib/admin/menus";
 import { requireAuthorizedUser } from "@/lib/auth";
+import { logActivity } from "@/lib/admin/audit-logger";
 import type { UserRole } from "@/types/domain";
 
 const validRoles: UserRole[] = ["Admin", "Prodi", "Dosen", "Mahasiswa", "Calon Mahasiswa", "Staff", "Keuangan", "Bendahara", "Pimpinan"];
 
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Terjadi kesalahan internal";
+  return error instanceof Error ? "Terjadi kesalahan sistem. Permintaan gagal diproses." : "Terjadi kesalahan internal";
 }
 
 export type MenuActionState = {
@@ -30,19 +31,27 @@ export async function saveMenuAction(previousState: MenuActionState = initialSta
   }
 
   try {
-    await saveMenu(
-      {
-        key: `${formData.get("key") ?? ""}`.trim(),
-        label: `${formData.get("label") ?? ""}`.trim(),
-        href: `${formData.get("href") ?? ""}`.trim(),
-        icon: `${formData.get("icon") ?? ""}`.trim(),
-        parentKey: `${formData.get("parentKey") ?? ""}`.trim(),
-        sortOrder: Number(formData.get("sortOrder") ?? 0),
-        roles,
-        isActive: formData.get("isActive") === "on",
-      },
-      `${formData.get("id") ?? ""}`.trim() || undefined,
-    );
+    const input = {
+      key: `${formData.get("key") ?? ""}`.trim(),
+      label: `${formData.get("label") ?? ""}`.trim(),
+      href: `${formData.get("href") ?? ""}`.trim(),
+      icon: `${formData.get("icon") ?? ""}`.trim(),
+      parentKey: `${formData.get("parentKey") ?? ""}`.trim(),
+      sortOrder: Number(formData.get("sortOrder") ?? 0),
+      roles,
+      isActive: formData.get("isActive") === "on",
+    };
+    const menuId = `${formData.get("id") ?? ""}`.trim() || undefined;
+
+    await saveMenu(input, menuId);
+
+    await logActivity({
+      modul: "Menu Builder",
+      aksi: menuId ? "UPDATE" : "CREATE",
+      tableName: "menus",
+      recordId: menuId,
+      newData: input,
+    });
 
     revalidatePath("/dashboard/pengaturan/menu-builder");
     revalidatePath("/dashboard/pengaturan/akun-akses");
@@ -61,6 +70,14 @@ export async function deleteMenuAction(previousState: MenuActionState = initialS
 
   try {
     await deleteMenu(id);
+
+    await logActivity({
+      modul: "Menu Builder",
+      aksi: "DELETE",
+      tableName: "menus",
+      recordId: id,
+    });
+
     revalidatePath("/dashboard/pengaturan/menu-builder");
     revalidatePath("/dashboard/pengaturan/akun-akses");
     return { success: true, message: "Menu berhasil dihapus." };
@@ -81,6 +98,15 @@ export async function moveMenuAction(formData: FormData) {
 
   try {
     await moveMenu(id, direction);
+
+    await logActivity({
+      modul: "Menu Builder",
+      aksi: "UPDATE",
+      tableName: "menus",
+      recordId: id,
+      metadata: { direction }
+    });
+
     revalidatePath("/dashboard/pengaturan/menu-builder");
     revalidatePath("/dashboard/pengaturan/akun-akses");
   } catch (error) {

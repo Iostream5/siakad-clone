@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { saveRoleAccessConfig, saveUserRoles } from "@/lib/admin/access-control";
 import { requireAuthorizedUser } from "@/lib/auth";
+import { logActivity } from "@/lib/admin/audit-logger";
 import { roles } from "@/lib/constants";
 import { withToastParams } from "@/lib/toast-query";
 import type { UserRole } from "@/types/domain";
@@ -35,8 +36,16 @@ export async function saveUserRolesAction(formData: FormData) {
 
   try {
     await saveUserRoles(userId, activeRole, selectedRoles);
+
+    await logActivity({
+      modul: "Akun & Akses",
+      aksi: "UPDATE",
+      tableName: "user_roles",
+      recordId: userId,
+      newData: { activeRole, selectedRoles },
+    });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Gagal menyimpan role pengguna.";
+    const message = "Terjadi kesalahan sistem. Permintaan gagal diproses.";
     redirect(
       withToastParams(`/dashboard/pengaturan/akun-akses?user=${userId}`, {
         variant: "error",
@@ -74,8 +83,15 @@ export async function saveRoleAccessAction(formData: FormData) {
 
   try {
     await saveRoleAccessConfig(role, selectedMenuKeys);
+
+    await logActivity({
+      modul: "Akun & Akses",
+      aksi: "UPDATE",
+      tableName: "role_menu_permissions",
+      newData: { role, selectedMenuKeys },
+    });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Gagal menyimpan akses role.";
+    const message = "Terjadi kesalahan sistem. Permintaan gagal diproses.";
     const userQuery = selectedUserId ? `user=${selectedUserId}&` : "";
     redirect(
       withToastParams(`/dashboard/pengaturan/akun-akses?${userQuery}role=${role}`, {

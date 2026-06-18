@@ -8,9 +8,9 @@ interface AuditLogParams {
   aksi: AuditAction;
   tableName: string;
   recordId?: string;
-  oldData?: any;
-  newData?: any;
-  metadata?: Record<string, any>;
+  oldData?: Record<string, unknown> | null;
+  newData?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 /**
