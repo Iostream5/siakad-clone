@@ -71,7 +71,16 @@ export function ReportAkademik({ data, prodiList }: { data: any[], prodiList: an
            </THead>
            <TBody>
              {data.length === 0 ? (
-               <TR><TD colSpan={5} className="text-center py-10 text-slate-500">Data tidak ditemukan.</TD></TR>
+               <TR>
+                 <TD colSpan={5} className="text-center py-16">
+                   <div className="flex flex-col items-center justify-center space-y-3">
+                     <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center">
+                       <FileDown className="h-6 w-6 text-slate-400" />
+                     </div>
+                     <p className="text-sm font-medium text-slate-500">Belum ada data mahasiswa yang tersedia untuk kriteria ini.</p>
+                   </div>
+                 </TD>
+               </TR>
              ) : data.map((row, idx) => (
                <TR key={idx} className="hover:bg-slate-50">
                  <TD className="px-4 py-3">

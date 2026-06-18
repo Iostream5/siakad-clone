@@ -35,11 +35,10 @@ export function DashboardOverview({
   activityFeed?: React.ReactNode
 }) {
   // Override metrics with real data for Admin
-  // TODO(Phase 4): Replace fixture with DB query
-  const metrics = [...dashboardMetrics[user.role]];
+  const metrics = [...(dashboardMetrics[user.role] || [])];
   
   if (user.role === "Admin" && stats) {
-    metrics[0] = { ...metrics[0], value: stats.mahasiswa.toLocaleString('id-ID') };
+    metrics[0] = { ...metrics[0], value: stats.mahasiswa.toLocaleString('id-ID'), change: "Real time" };
     metrics[2] = { label: "Total Dosen", value: stats.dosen.toLocaleString('id-ID'), change: "Aktif" };
   }
 

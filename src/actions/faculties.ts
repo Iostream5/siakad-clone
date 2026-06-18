@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { deleteFaculty, importFacultiesFromCsv, saveFaculty } from "@/lib/admin/faculties";
 import { requireAuthorizedUser } from "@/lib/auth";
+import { logActivity } from "@/lib/admin/audit-logger";
 
 export type FacultyActionState = {
   success: boolean;
@@ -27,16 +28,24 @@ export async function saveFacultyAction(
   await requireAuthorizedUser("master-data.fakultas");
 
   try {
-    await saveFaculty(
-      {
+    const id = `${formData.get("id") ?? ""}`.trim() || undefined;
+    const data = {
         kode: `${formData.get("kode") ?? ""}`.trim(),
         nama: `${formData.get("nama") ?? ""}`.trim(),
         dekan: `${formData.get("dekan") ?? ""}`.trim(),
         deskripsi: `${formData.get("deskripsi") ?? ""}`.trim(),
         isAktif: toBool(formData.get("isAktif")),
-      },
-      `${formData.get("id") ?? ""}`.trim() || undefined,
-    );
+    };
+
+    await saveFaculty(data, id);
+
+    await logActivity({
+      modul: "FAKULTAS",
+      aksi: id ? "UPDATE" : "CREATE",
+      tableName: "fakultas",
+      recordId: id,
+      newData: data
+    });
 
     revalidatePath("/dashboard/master-data/fakultas");
     revalidatePath("/dashboard/master-data");
@@ -70,6 +79,14 @@ export async function deleteFacultyAction(
 
   try {
     await deleteFaculty(id);
+
+    await logActivity({
+      modul: "FAKULTAS",
+      aksi: "DELETE",
+      tableName: "fakultas",
+      recordId: id,
+    });
+
     revalidatePath("/dashboard/master-data/fakultas");
     revalidatePath("/dashboard/master-data");
 

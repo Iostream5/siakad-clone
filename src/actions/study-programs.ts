@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { deleteStudyProgram, importStudyProgramsFromCsv, saveStudyProgram } from "@/lib/admin/study-programs";
 import { requireAuthorizedUser } from "@/lib/auth";
 import { withToastParams } from "@/lib/toast-query";
+import { logActivity } from "@/lib/admin/audit-logger";
 import { studyProgramSchema } from "@/lib/validators";
 
 function getErrorMessage(error: unknown) {
@@ -40,6 +41,13 @@ export async function saveStudyProgramAction(
 
   try {
     await saveStudyProgram(validated.data, id);
+    await logActivity({
+      modul: "PROGRAM_STUDI",
+      aksi: id ? "UPDATE" : "CREATE",
+      tableName: "program_studi",
+      recordId: id,
+      newData: validated.data
+    });
   } catch (error) {
     redirect(
       withToastParams("/dashboard/master-data/program-studi", {
@@ -75,6 +83,12 @@ export async function deleteStudyProgramAction(formData: FormData) {
 
   try {
     await deleteStudyProgram(id);
+    await logActivity({
+      modul: "PROGRAM_STUDI",
+      aksi: "DELETE",
+      tableName: "program_studi",
+      recordId: id,
+    });
   } catch (error) {
     redirect(
       withToastParams("/dashboard/master-data/program-studi", {

@@ -10,6 +10,7 @@ import {
   setAcademicYearKrsOpen,
   setActiveAcademicYear,
 } from "@/lib/admin/academic-years";
+import { logActivity } from "@/lib/admin/audit-logger";
 
 export type AcademicYearActionState = {
   success: boolean;
@@ -33,8 +34,8 @@ export async function saveAcademicYearAction(
   await requireAuthorizedUser("master-data.tahun-akademik");
 
   try {
-    await saveAcademicYear(
-      {
+    const id = `${formData.get("id") ?? ""}`.trim() || undefined;
+    const data = {
         kode: `${formData.get("kode") ?? ""}`.trim(),
         nama: `${formData.get("nama") ?? ""}`.trim(),
         semester: `${formData.get("semester") ?? ""}`.trim() as "Ganjil" | "Genap" | "Pendek",
@@ -42,9 +43,17 @@ export async function saveAcademicYearAction(
         tanggalSelesai: `${formData.get("tanggalSelesai") ?? ""}`.trim(),
         isAktif: toBool(formData.get("isAktif")),
         isKrsOpen: toBool(formData.get("isKrsOpen")),
-      },
-      `${formData.get("id") ?? ""}`.trim() || undefined,
-    );
+    };
+
+    await saveAcademicYear(data, id);
+
+    await logActivity({
+      modul: "TAHUN_AKADEMIK",
+      aksi: id ? "UPDATE" : "CREATE",
+      tableName: "tahun_akademik",
+      recordId: id,
+      newData: data
+    });
 
     revalidatePath("/dashboard/master-data/tahun-akademik");
     revalidatePath("/dashboard/master-data");
@@ -78,6 +87,14 @@ export async function deleteAcademicYearAction(
 
   try {
     await deleteAcademicYear(id);
+
+    await logActivity({
+      modul: "TAHUN_AKADEMIK",
+      aksi: "DELETE",
+      tableName: "tahun_akademik",
+      recordId: id,
+    });
+
     revalidatePath("/dashboard/master-data/tahun-akademik");
     revalidatePath("/dashboard/master-data");
 
@@ -113,6 +130,14 @@ export async function setActiveAcademicYearAction(
   try {
     await setActiveAcademicYear(id);
     await setAcademicYearKrsOpen(id, openKrs);
+
+    await logActivity({
+      modul: "TAHUN_AKADEMIK",
+      aksi: "UPDATE",
+      tableName: "tahun_akademik",
+      recordId: id,
+      newData: { set_aktif: true, open_krs: openKrs }
+    });
 
     revalidatePath("/dashboard/master-data/tahun-akademik");
     revalidatePath("/dashboard/master-data");
