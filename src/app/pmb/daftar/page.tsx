@@ -4,6 +4,7 @@ import { ArrowLeft, CircleCheckBig, Files, GraduationCap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PmbRegistrationForm } from "@/app/pmb/daftar/registration-form";
 import { getStudyProgramList } from "@/lib/admin/study-programs";
+import { getSystemSettings } from "@/lib/admin/phase1-admin";
 
 const supportItems = [
   "Isi data diri dan kontak aktif",
@@ -14,8 +15,14 @@ const supportItems = [
 export default async function PmbRegistrationPage() {
   const programOptions = await getStudyProgramList();
 
-  // Placeholder for open registration period check
-  const isPmbOpen = true; // TODO: Query an actual settings table to determine if PMB is open
+  const settingsResult = await getSystemSettings();
+  let isPmbOpen = true; // fallback
+  if (settingsResult.rows) {
+    const setting = settingsResult.rows.find((s) => s.key === "pmb_registration_open");
+    if (setting && setting.value && typeof setting.value === "object" && "value" in setting.value) {
+       isPmbOpen = Boolean(setting.value.value);
+    }
+  }
 
   if (!isPmbOpen) {
     return (

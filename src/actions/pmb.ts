@@ -193,7 +193,7 @@ export async function updatePmbStatusAction(formData: FormData) {
       withToastParams("/dashboard/pmb", {
         variant: "error",
         title: "Gagal memperbarui status",
-        message: error instanceof Error ? error.message : "Terjadi kesalahan internal",
+        message: "Terjadi kesalahan sistem. Permintaan gagal diproses.",
       }),
     );
   }
@@ -244,7 +244,7 @@ export async function savePmbFeeAction(formData: FormData) {
       withToastParams("/dashboard/pmb?tab=tarif", {
         variant: "error",
         title: "Gagal menyimpan tarif PMB",
-        message: error instanceof Error ? error.message : "Terjadi kesalahan internal",
+        message: "Terjadi kesalahan sistem. Permintaan gagal diproses.",
       }),
     );
   }
@@ -292,7 +292,7 @@ export async function deletePmbFeeAction(formData: FormData) {
       withToastParams("/dashboard/pmb?tab=tarif", {
         variant: "error",
         title: "Gagal menghapus tarif PMB",
-        message: error instanceof Error ? error.message : "Terjadi kesalahan internal",
+        message: "Terjadi kesalahan sistem. Permintaan gagal diproses.",
       }),
     );
   }
@@ -336,7 +336,7 @@ export async function submitPmbTransferPaymentAction(formData: FormData) {
       withToastParams("/dashboard/keuangan?tab=pmb", {
         variant: "error",
         title: "Gagal mengirim bukti transfer",
-        message: error instanceof Error ? error.message : "Terjadi kesalahan internal",
+        message: "Terjadi kesalahan sistem. Permintaan gagal diproses.",
       }),
     );
   }
@@ -368,7 +368,7 @@ export async function requestPmbPaymentGatewayAction(formData: FormData) {
       withToastParams("/dashboard/keuangan?tab=pmb", {
         variant: "error",
         title: "Gagal membuat checkout gateway",
-        message: error instanceof Error ? error.message : "Gateway belum dikonfigurasi.",
+        message: "Terjadi kesalahan sistem. Permintaan gagal diproses.",
       }),
     );
   }
@@ -407,7 +407,7 @@ export async function verifyPmbPaymentAction(formData: FormData) {
       withToastParams("/dashboard/pmb?tab=pembayaran", {
         variant: "error",
         title: "Gagal memverifikasi pembayaran PMB",
-        message: error instanceof Error ? error.message : "Terjadi kesalahan internal",
+        message: "Terjadi kesalahan sistem. Permintaan gagal diproses.",
       }),
     );
   }
@@ -468,7 +468,7 @@ export async function updatePmbPaymentStatusAction(formData: FormData) {
       withToastParams("/dashboard/pmb", {
         variant: "error",
         title: "Gagal memperbarui pembayaran",
-        message: error instanceof Error ? error.message : "Terjadi kesalahan internal",
+        message: "Terjadi kesalahan sistem. Permintaan gagal diproses.",
       }),
     );
   }
@@ -521,7 +521,7 @@ export async function generateNimAction(formData: FormData) {
       withToastParams("/dashboard/pmb", {
         variant: "error",
         title: "Gagal generate NIM",
-        message: error instanceof Error ? error.message : "Terjadi kesalahan internal",
+        message: "Terjadi kesalahan sistem. Permintaan gagal diproses.",
       }),
     );
   }

@@ -33,8 +33,8 @@ export async function requestFinancePaymentGatewayAction(tagihanId: string) {
 }
 
 
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Terjadi kesalahan tidak dikenal.";
+function getErrorMessage(_error: unknown) {
+  return "Terjadi kesalahan sistem. Permintaan gagal diproses.";
 }
 
 /**
