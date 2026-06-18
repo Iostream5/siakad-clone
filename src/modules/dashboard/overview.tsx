@@ -35,6 +35,7 @@ export function DashboardOverview({
   activityFeed?: React.ReactNode
 }) {
   // Override metrics with real data for Admin
+  // TODO(Phase 4): Replace fixture with DB query
   const metrics = [...dashboardMetrics[user.role]];
   
   if (user.role === "Admin" && stats) {

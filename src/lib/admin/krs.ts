@@ -127,6 +127,7 @@ export async function submitKrs(mahasiswaId: string, tahunAkademikId: string, ja
   }
 
   // 3. Validate Maksimal SKS (Hardcoded limit 24 for now)
+  // TODO(Phase 4): Get MAX_SKS from configuration or student's IPS from previous semester
   const MAX_SKS = 24;
   if (totalSks > MAX_SKS) {
       throw new Error(`Total SKS (${totalSks}) melebihi batas maksimal (${MAX_SKS} SKS).`);

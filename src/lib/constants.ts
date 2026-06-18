@@ -194,6 +194,7 @@ export const announcementFeed: Announcement[] = [
   },
 ];
 
+// TODO(Phase 4): Replace fixture with DB query
 export const dashboardMetrics: Record<UserRole | string, DashboardMetric[]> = {
   Admin: [
     { label: "Mahasiswa Aktif", value: "2.481", change: "+4.2%" },
@@ -241,6 +242,7 @@ export const dashboardMetrics: Record<UserRole | string, DashboardMetric[]> = {
   ],
 };
 
+// TODO(Phase 4): Replace fixture with DB query
 export const studentBilling: BillingItem[] = [
   {
     id: "bill-1",
@@ -258,6 +260,7 @@ export const studentBilling: BillingItem[] = [
   },
 ];
 
+// TODO(Phase 4): Replace fixture with DB query
 export const offeredCourses: KrsCourse[] = [
   {
     code: "IF602",

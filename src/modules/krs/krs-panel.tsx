@@ -11,7 +11,7 @@ export function KrsPanel() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-slate-500">KRS Wizard</p>
-            <h3 className="text-xl font-semibold text-slate-900">Validasi jadwal, kapasitas, dan prasyarat</h3>
+            <h3 className="text-xl font-semibold text-slate-900">Validasi jadwal, kapasitas, dan prasyarat <span className="text-xs text-orange-500 ml-2">(Data Dummy)</span></h3>
           </div>
           <Badge>IPS 3.72 • Batas 24 SKS</Badge>
         </div>
@@ -55,7 +55,7 @@ export function KrsPanel() {
 
       <Card>
         <p className="text-sm text-slate-500">Blocking Rules</p>
-        <h3 className="mt-1 text-xl font-semibold text-slate-900">Syarat pengisian KRS</h3>
+        <h3 className="mt-1 text-xl font-semibold text-slate-900">Syarat pengisian KRS <span className="text-xs text-orange-500 ml-2">(Data Dummy)</span></h3>
         <div className="mt-5 space-y-3">
           <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-800">Status mahasiswa aktif: valid</div>
           <div className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-800">
