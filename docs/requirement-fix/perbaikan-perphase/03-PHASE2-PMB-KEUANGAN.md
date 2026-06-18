@@ -8,6 +8,7 @@ Membuat flow calon mahasiswa dan pembayaran bisa diuji end-to-end: daftar, bayar
 
 - `/pmb/daftar` masih memakai `isPmbOpen = true`.
 - Tabel `pmb_pendaftaran`, `pmb_pembayaran`, `tagihan`, dan `pembayaran` masih kosong.
+- Kartu/dashboard/fixture halaman PMB dan finance boleh tetap hardcoded sementara sampai flow data inti stabil.
 - Flow PMB belum terbukti: daftar -> bayar -> verifikasi -> seleksi -> generate NIM.
 - Flow finance belum terbukti karena data tagihan/pembayaran kosong.
 - Webhook sudah punya validasi signature di service, tetapi belum diuji dengan payload valid/invalid karena data order belum siap.
@@ -69,6 +70,7 @@ Definition of done:
 - Dashboard PMB tidak kosong.
 - Dashboard finance tidak kosong.
 - Flow minimal bisa diuji dari UI.
+- Jika ada kartu/dashboard masih hardcoded, statusnya ditandai sebagai fixture sementara.
 
 ### 3. Test Webhook Payment
 
@@ -107,6 +109,6 @@ Definition of done:
 - Ada data PMB dan finance minimal.
 - Flow PMB bisa dicoba.
 - Flow tagihan/pembayaran bisa dicoba.
+- Fixture halaman boleh tetap hardcoded selama flow transaksi utama memakai data sample yang bisa diuji.
 - Webhook invalid/valid sudah dites.
 - `npm run type-check` PASS.
-

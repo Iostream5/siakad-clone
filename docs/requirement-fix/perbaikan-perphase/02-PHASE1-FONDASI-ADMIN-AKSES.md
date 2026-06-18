@@ -2,11 +2,11 @@
 
 ## Tujuan
 
-Membuat fondasi admin benar-benar bisa dipakai: user, role, menu, sidebar, permission, audit mutasi, dan kualitas Server Action.
+Membuat fondasi admin benar-benar bisa dipakai: user, role, sidebar/menu sementara, permission, audit mutasi, dan kualitas Server Action.
 
 ## Masalah dari File Gabungan
 
-- Tabel `menus` kosong sehingga sidebar masih fallback hardcoded.
+- Tabel `menus` kosong; untuk sementara sidebar/menu tetap boleh memakai fallback hardcoded.
 - `user_roles`, `role_menu_permissions`, dan `user_menu_permissions` masih kosong.
 - Data user/role DEV belum cukup untuk test role utama.
 - Banyak Server Action belum diaudit penuh.
@@ -52,21 +52,21 @@ Definition of done:
 - Role aktif dan multi-role berjalan.
 - Dashboard dan sidebar sesuai role.
 
-### 2. Isi Menu dari Database
+### 2. Pertahankan Menu Hardcoded/Fallback Sementara
 
 Langkah:
 
-1. Seed tabel `menus` dari `menuDefinitions`.
-2. Isi role default di tiap menu.
-3. Test Menu Builder.
-4. Test sidebar tanpa bergantung pada fallback.
+1. Jadikan `menuDefinitions` atau `src/lib/constants.ts` sebagai sumber menu sementara.
+2. Pastikan sidebar menampilkan route penting sesuai role yang sedang diuji.
+3. Catat rencana pindah ke tabel `menus` sebagai backlog, bukan blocker Phase 1.
+4. Menu Builder boleh tetap ada, tetapi belum wajib menjadi sumber utama sidebar.
 
 Definition of done:
 
-- `menus` tidak kosong.
-- Menu Builder membaca DB.
-- Sidebar normal memakai data DB.
-- Fallback hanya untuk kondisi DB gagal.
+- Sidebar tampil stabil dari fallback hardcoded.
+- Route penting untuk role utama bisa diakses sesuai permission.
+- Gap menuju menu DB/Menu Builder terdokumentasi.
+- Tidak ada klaim sidebar sudah database-driven jika belum terbukti.
 
 ### 3. Audit Server Action Admin
 
@@ -100,9 +100,8 @@ Definition of done:
 
 - Admin bisa login.
 - Role utama bisa diuji.
-- Sidebar dari DB.
-- Menu Builder berjalan.
+- Sidebar/menu hardcoded sementara berjalan dan route penting terlihat.
+- Menu Builder/menu DB tercatat sebagai backlog.
 - Mutasi admin mencatat audit.
 - `npm run type-check` PASS.
 - `npm run lint` PASS.
-

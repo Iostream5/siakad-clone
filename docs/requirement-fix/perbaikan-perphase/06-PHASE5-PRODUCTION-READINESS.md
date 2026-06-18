@@ -11,6 +11,8 @@ Menyiapkan aplikasi untuk jalur production setelah P0 sampai Phase 4 cukup stabi
 - Dependency security belum bersih.
 - Secret history belum selesai.
 - Docs masih drift dari repo aktual.
+- Menu/sidebar dan data fixture halaman masih boleh hardcoded sementara jika statusnya jelas.
+- Fitur notifikasi ditunda dan tidak menjadi blocker production candidate awal.
 - Smoke test per role belum selesai.
 
 ## File/Area Terkait
@@ -34,12 +36,14 @@ Langkah:
 2. Hapus atau tandai dokumen historis yang menyebut struktur lama.
 3. Sinkronkan PRD dengan dependency aktual.
 4. Pastikan docs tidak menyebut fitur sudah selesai kalau belum terbukti.
+5. Pastikan menu/data hardcoded dan notifikasi tertunda ditulis sebagai status sementara/backlog.
 
 Definition of done:
 
 - PRD dan ringkasan cocok dengan repo.
 - Agent baru tidak diarahkan ke path/stack salah.
 - Requirement-fix tidak bertentangan dengan kondisi sekarang.
+- Gate production tidak gagal hanya karena menu/data fixture masih hardcoded atau notifikasi belum dikerjakan.
 
 ### 2. Final Gate Teknis
 
@@ -76,6 +80,7 @@ Langkah:
    - LMS,
    - laporan,
    - audit log.
+6. Catat notifikasi sebagai skipped/backlog bila belum masuk scope.
 
 Definition of done:
 
@@ -105,6 +110,6 @@ Definition of done:
 - Secret/history aman untuk target release.
 - Dependency risk diputuskan.
 - Smoke test semua role selesai.
+- Menu/data hardcoded dan notifikasi tertunda punya catatan status yang jelas.
 - Docs sinkron.
 - Backup dan rollback siap.
-

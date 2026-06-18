@@ -1,16 +1,16 @@
-# Phase 4 - Modul Lanjutan, EDOM, Notifikasi, dan Laporan
+# Phase 4 - Modul Lanjutan, EDOM, Audit Log, dan Laporan
 
 ## Tujuan
 
-Merapikan modul lanjutan setelah fondasi data dan flow utama siap: EDOM, notifikasi, laporan, dan dashboard berbasis data real.
+Merapikan modul lanjutan setelah fondasi data dan flow utama siap: EDOM, audit log, laporan, dan dashboard berbasis data real. Fitur notifikasi ditunda penuh sebagai backlog.
 
 ## Masalah dari File Gabungan
 
 - EDOM masih placeholder dan mismatch tabel.
-- `notification_queue` masih kosong.
+- Fitur notifikasi, termasuk template, queue, event, dan in-app notification, ditunda/backlog.
 - `audit_logs` masih kosong.
 - Laporan belum terbukti karena data sumber kosong.
-- Dashboard chart/metric masih sebagian hardcoded.
+- Dashboard chart/metric masih sebagian hardcoded dan boleh menjadi fixture sementara.
 - Smoke test per role belum dilakukan penuh.
 
 ## File/Area Terkait
@@ -19,19 +19,12 @@ Merapikan modul lanjutan setelah fondasi data dan flow utama siap: EDOM, notifik
 - `src/lib/admin/edom.ts`
 - `src/modules/edom/*`
 - `src/app/dashboard/edom/page.tsx`
-- `src/lib/admin/notifications.ts`
-- `src/actions/notifications.ts`
-- `src/modules/dashboard/notification-list.tsx`
-- `src/app/dashboard/notifikasi/page.tsx`
 - `src/modules/reports/*`
 - `src/lib/admin/reports.ts`
 - `src/modules/dashboard/overview.tsx`
 - tabel `edom_questions`
 - tabel `edom_responses`
 - tabel `edom_response_answers`
-- tabel `notification_templates`
-- tabel `notification_queue`
-- tabel `notifikasi`
 - tabel `audit_logs`
 
 ## Perbaikan Urgent
@@ -51,20 +44,20 @@ Definition of done:
 - Data evaluasi tersimpan.
 - Rekap terlihat.
 
-### 2. Notifikasi dan Audit Log
+### 2. Audit Log
 
 Langkah:
 
-1. Pastikan event penting bisa membuat notifikasi atau masuk queue.
-2. Cek template notifikasi yang sudah ada.
-3. Pastikan action mutasi penting menulis audit log.
-4. Dashboard notifikasi tidak hanya preview kosong jika data ada.
+1. Pastikan action mutasi penting menulis audit log.
+2. Pastikan audit log bisa dibaca dari dashboard/admin yang sesuai.
+3. Catat event yang nanti perlu notifikasi sebagai backlog.
+4. Jangan jadikan notifikasi sebagai blocker Phase 4.
 
 Definition of done:
 
-- Notifikasi sample bisa tampil.
-- Queue/event tercatat.
 - Audit log bisa dilihat dari dashboard.
+- Event calon notifikasi terdokumentasi sebagai backlog.
+- Tidak ada klaim fitur notifikasi sudah siap jika belum diuji.
 
 ### 3. Laporan Berbasis Data Real
 
@@ -97,8 +90,8 @@ Definition of done:
 ## Gate Phase 4
 
 - EDOM minimal jalan.
-- Notifikasi/audit log punya data nyata.
+- Audit log punya data nyata.
+- Notifikasi ditunda/backlog dan tidak menjadi blocker.
 - Laporan membaca data real.
 - Smoke test per role terdokumentasi.
 - `npm run type-check` PASS.
-

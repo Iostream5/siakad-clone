@@ -8,8 +8,8 @@ Membuktikan flow akademik berjalan: jadwal, KRS, approval, nilai, KHS/transkrip,
 
 - Data `program_studi`, `dosen`, `mahasiswa`, `mata_kuliah`, `jadwal_kuliah`, `krs_header`, `nilai_akhir`, dan `lms_*` masih kosong.
 - Flow KRS belum terbukti karena tidak ada mahasiswa/jadwal/KRS.
-- Batas SKS masih hardcoded.
-- `dashboardMetrics`, `studentBilling`, dan `offeredCourses` masih hardcoded di constants.
+- Batas SKS masih hardcoded dan boleh ditunda selama flow KRS tetap aman.
+- `dashboardMetrics`, `studentBilling`, dan `offeredCourses` masih hardcoded di constants; ini fixture sementara, bukan blocker phase.
 - Banyak module LMS masih memakai `any`.
 - Belum ada smoke test role dosen/mahasiswa untuk akademik dan LMS.
 
@@ -68,7 +68,7 @@ Langkah:
 2. Test mahasiswa submit KRS.
 3. Test dosen/prodi approve/reject KRS.
 4. Pastikan audit log masuk.
-5. Pindahkan batas SKS dari hardcoded ke aturan/config jika sudah ada sumber datanya.
+5. Catat batas SKS hardcoded sebagai backlog jika belum ada sumber data yang siap.
 
 Definition of done:
 
@@ -108,19 +108,20 @@ Definition of done:
 - Mahasiswa bisa melihat materi/tugas/forum sesuai KRS.
 - Submission dan grading berjalan minimal.
 
-### 5. Ganti Data Hardcoded ke DB
+### 5. Backlog Pindah Fixture ke DB
 
 Langkah:
 
 1. Identifikasi `dashboardMetrics`, `studentBilling`, dan `offeredCourses`.
-2. Ganti bertahap dengan query DB.
-3. Empty state harus jelas saat data belum ada.
+2. Tandai data tersebut sebagai fixture sementara.
+3. Ganti bertahap dengan query DB setelah flow akademik inti stabil.
+4. Empty state harus jelas saat data belum ada.
 
 Definition of done:
 
-- Dashboard dan KRS tidak menampilkan data palsu.
-- Billing membaca tagihan real.
-- KRS membaca jadwal real.
+- Data fixture halaman terdokumentasi sebagai sementara.
+- KRS tetap membaca jadwal/data inti yang bisa diuji.
+- Billing real dan dashboard real masuk backlog berikutnya jika belum siap.
 
 ## Gate Phase 3
 
@@ -128,6 +129,5 @@ Definition of done:
 - KRS bisa submit dan approve.
 - Nilai bisa input dan dilihat sesuai role.
 - LMS minimal berjalan.
-- Data hardcoded utama sudah berkurang.
+- Data hardcoded halaman tercatat sebagai fixture sementara/backlog.
 - `npm run type-check` PASS.
-
