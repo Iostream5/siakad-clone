@@ -168,9 +168,7 @@ function DeleteJadwalKuliahModal({ open, onClose, item }: { open: boolean; onClo
 
 export function JadwalKuliahManager({
   items,
-  totalItems,
-  totalPages,
-  currentPage,
+
   query,
   tahunAkademikList,
   mataKuliahList,
