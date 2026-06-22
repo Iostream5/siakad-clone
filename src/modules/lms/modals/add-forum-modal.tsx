@@ -20,9 +20,10 @@ interface AddForumModalProps {
   isOpen: boolean;
   onClose: () => void;
   jadwalId: string;
+  canPin?: boolean;
 }
 
-export function AddForumModal({ isOpen, onClose, jadwalId }: AddForumModalProps) {
+export function AddForumModal({ isOpen, onClose, jadwalId, canPin = false }: AddForumModalProps) {
   const [isPending, startTransition] = useTransition();
   const { success, error } = useToast();
 
@@ -69,20 +70,22 @@ export function AddForumModal({ isOpen, onClose, jadwalId }: AddForumModalProps)
             />
           </div>
 
-          <div className="flex items-center space-x-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
-            <Checkbox id="isPinned" name="isPinned" value="true" />
-            <div className="grid gap-1.5 leading-none">
-              <label
-                htmlFor="isPinned"
-                className="text-xs font-bold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700"
-              >
-                Sematkan Topik (Pin)
-              </label>
-              <p className="text-[10px] text-slate-400 font-medium">
-                Topik akan selalu tampil di urutan paling atas.
-              </p>
+          {canPin && (
+            <div className="flex items-center space-x-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <Checkbox id="isPinned" name="isPinned" value="true" />
+              <div className="grid gap-1.5 leading-none">
+                <label
+                  htmlFor="isPinned"
+                  className="text-xs font-bold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700"
+                >
+                  Sematkan Topik (Pin)
+                </label>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  Topik akan selalu tampil di urutan paling atas.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
           <DialogFooter className="pt-4">
             <Button 

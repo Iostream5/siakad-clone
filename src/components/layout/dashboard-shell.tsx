@@ -56,17 +56,17 @@ export function DashboardShell({
       />
 
       <div 
-        className={`flex min-h-screen flex-1 flex-col transition-[padding-left] duration-300 ${
+        className={`flex min-h-screen min-w-0 flex-1 flex-col transition-[padding-left] duration-300 ${
           sidebarCollapsed ? "lg:pl-[5.25rem]" : "lg:pl-[17rem]"
         }`}
       >
         {/* Fixed Topbar Container */}
         <header
-            className={`fixed top-0 right-0 z-30 flex h-16 items-center border-b border-slate-200 bg-white/80 backdrop-blur-md transition-[left] duration-300 ${
+            className={`fixed top-0 right-0 left-0 z-30 flex h-16 min-w-0 items-center border-b border-slate-200 bg-white/80 backdrop-blur-md transition-[left] duration-300 ${
             sidebarCollapsed ? "lg:left-[5.25rem]" : "lg:left-[17rem]"
-          } left-0`}
+          }`}
         >
-          <div className="w-full px-4 md:px-8">
+          <div className="h-full min-w-0 w-full px-3 sm:px-4 md:px-6 lg:px-8">
             <Topbar user={user} onToggleSidebar={handleToggleSidebar} notificationPreview={notificationPreview} />
           </div>
         </header>

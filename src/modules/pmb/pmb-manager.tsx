@@ -24,8 +24,13 @@ import {
 
 import {
   deletePmbFeeAction,
+  finalizePmbSelectionAction,
   generateNimAction,
+  savePmbPassingGradeAction,
   savePmbFeeAction,
+  savePmbSelectionComponentAction,
+  savePmbSelectionScheduleAction,
+  savePmbSelectionScoreAction,
   updatePmbPaymentStatusAction,
   updatePmbStatusAction,
   verifyPmbPaymentAction,
@@ -36,6 +41,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import type { DosenRow } from "@/lib/admin/dosen";
+import type { PmbSelectionData, PmbSelectionScheduleRow, PmbSelectionScoreRow } from "@/lib/admin/pmb";
 import type { UserRole } from "@/types/domain";
 
 type PmbDocument = {
@@ -226,14 +233,18 @@ function MiniStat({
 export function PmbManager({
   items,
   pmbFees,
+  selectionData,
   academicYears,
   studyPrograms,
+  lecturers,
   userRole,
 }: {
   items: PmbItem[];
   pmbFees: PmbFeeItem[];
+  selectionData: PmbSelectionData;
   academicYears: AcademicYearOption[];
   studyPrograms: StudyProgramOption[];
+  lecturers: DosenRow[];
   userRole: UserRole;
 }) {
   const searchParams = useSearchParams();
@@ -273,6 +284,22 @@ export function PmbManager({
     [items],
   );
 
+  const scheduleByPmb = useMemo(() => {
+    const map = new Map<string, PmbSelectionScheduleRow>();
+    selectionData.schedules.forEach((schedule) => map.set(schedule.pmb_pendaftaran_id, schedule));
+    return map;
+  }, [selectionData.schedules]);
+
+  const scoresByPmb = useMemo(() => {
+    const map = new Map<string, Map<string, PmbSelectionScoreRow>>();
+    selectionData.scores.forEach((score) => {
+      const current = map.get(score.pmb_pendaftaran_id) ?? new Map<string, PmbSelectionScoreRow>();
+      current.set(score.komponen_id, score);
+      map.set(score.pmb_pendaftaran_id, current);
+    });
+    return map;
+  }, [selectionData.scores]);
+
   const exportToExcel = () => {
     const escapeCsv = (str: string | null) => {
       if (!str) return '""';
@@ -311,6 +338,33 @@ export function PmbManager({
           fees={pmbFees}
           academicYears={academicYears}
           studyPrograms={studyPrograms}
+        />
+      </div>
+    );
+  }
+
+  if (activeTab === "seleksi") {
+    return (
+      <div className="space-y-6">
+        <PmbTabs activeTab={activeTab} tabs={visibleTabs} />
+        <div className="grid gap-3 md:grid-cols-5">
+          <MiniStat label="Siap Seleksi" value={filteredItems.length} icon={FileCheck2} />
+          <MiniStat label="Terjadwal" value={selectionData.schedules.filter((item) => item.status === "Terjadwal").length} icon={Clock} />
+          <MiniStat label="Komponen" value={selectionData.components.filter((item) => item.is_active).length} icon={BadgeCheck} />
+          <MiniStat label="Lulus" value={items.filter((item) => item.status_seleksi === "LULUS").length} icon={CheckCircle2} />
+          <MiniStat label="Ditolak" value={items.filter((item) => item.status_seleksi === "DITOLAK").length} icon={XCircle} />
+        </div>
+        <PmbSelectionWorkspace
+          items={filteredItems}
+          selectionData={selectionData}
+          scheduleByPmb={scheduleByPmb}
+          scoresByPmb={scoresByPmb}
+          academicYears={academicYears}
+          studyPrograms={studyPrograms}
+          lecturers={lecturers}
+          userRole={userRole}
+          search={search}
+          setSearch={setSearch}
         />
       </div>
     );
@@ -678,6 +732,267 @@ function PmbTabs({
         ))}
       </div>
     </Card>
+  );
+}
+
+function toDateTimeInput(value: string | null | undefined) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 16);
+}
+
+function calculateSelectionScore(
+  components: PmbSelectionData["components"],
+  scores: Map<string, PmbSelectionScoreRow> | undefined,
+) {
+  const activeComponents = components.filter((component) => component.is_active && Number(component.bobot) > 0);
+  const totalWeight = activeComponents.reduce((sum, component) => sum + Number(component.bobot), 0);
+  if (activeComponents.length === 0 || totalWeight <= 0) return null;
+
+  const missing = activeComponents.some((component) => !scores?.has(component.id));
+  if (missing) return null;
+
+  const total = activeComponents.reduce((sum, component) => {
+    const score = Number(scores?.get(component.id)?.skor ?? 0);
+    const normalizedScore = (score / Number(component.skor_maks)) * 100;
+    return sum + normalizedScore * (Number(component.bobot) / totalWeight);
+  }, 0);
+
+  return total;
+}
+
+function PmbSelectionWorkspace({
+  items,
+  selectionData,
+  scheduleByPmb,
+  scoresByPmb,
+  academicYears,
+  studyPrograms,
+  lecturers,
+  userRole,
+  search,
+  setSearch,
+}: {
+  items: PmbItem[];
+  selectionData: PmbSelectionData;
+  scheduleByPmb: Map<string, PmbSelectionScheduleRow>;
+  scoresByPmb: Map<string, Map<string, PmbSelectionScoreRow>>;
+  academicYears: AcademicYearOption[];
+  studyPrograms: StudyProgramOption[];
+  lecturers: DosenRow[];
+  userRole: UserRole;
+  search: string;
+  setSearch: (value: string) => void;
+}) {
+  const activeYear = academicYears.find((item) => item.is_aktif) ?? academicYears[0] ?? null;
+  const canManageSetup = userRole === "Admin" || userRole === "Prodi";
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+      <div className="space-y-6">
+        {canManageSetup ? (
+          <Card className="rounded-lg border-slate-200 bg-white p-6 shadow-sm">
+            <div className="border-b border-slate-100 pb-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Setup Seleksi</p>
+              <h3 className="mt-1 text-lg font-black uppercase tracking-tight text-slate-900">Komponen Nilai</h3>
+            </div>
+            <form action={savePmbSelectionComponentAction} className="mt-5 grid gap-3">
+              <Input name="nama" placeholder="Contoh: Wawancara" className="h-10 rounded-lg font-bold" required />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Input name="bobot" type="number" min={1} max={100} defaultValue={50} className="h-10 rounded-lg font-bold" required />
+                <Input name="skorMaks" type="number" min={1} defaultValue={100} className="h-10 rounded-lg font-bold" required />
+                <Input name="urutan" type="number" min={0} defaultValue={0} className="h-10 rounded-lg font-bold" required />
+              </div>
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-600">
+                <input name="isActive" type="checkbox" defaultChecked className="h-4 w-4 accent-indigo-600" />
+                Aktif
+              </label>
+              <Button className="h-10 rounded-lg bg-slate-900 text-[10px] font-black uppercase tracking-widest text-white hover:bg-black">
+                Simpan Komponen
+              </Button>
+            </form>
+
+            <div className="mt-5 space-y-2">
+              {selectionData.components.map((component) => (
+                <div key={component.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-900">{component.nama}</p>
+                    <p className="text-[10px] font-bold text-slate-500">
+                      Bobot {component.bobot}% / Maks {component.skor_maks}
+                    </p>
+                  </div>
+                  <Badge className={cn("rounded-md text-[8px] font-black uppercase", component.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")}>
+                    {component.is_active ? "Aktif" : "Nonaktif"}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
+        ) : null}
+
+        {canManageSetup ? (
+          <Card className="rounded-lg border-slate-200 bg-white p-6 shadow-sm">
+            <div className="border-b border-slate-100 pb-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Batas Lulus</p>
+              <h3 className="mt-1 text-lg font-black uppercase tracking-tight text-slate-900">Passing Grade</h3>
+            </div>
+            <form action={savePmbPassingGradeAction} className="mt-5 grid gap-3">
+              <select name="tahunAkademikId" defaultValue={activeYear?.id ?? ""} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold">
+                <option value="">Semua tahun akademik</option>
+                {academicYears.map((year) => (
+                  <option key={year.id} value={year.id}>{year.nama}</option>
+                ))}
+              </select>
+              <select name="prodiId" defaultValue="" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold">
+                <option value="">Semua prodi</option>
+                {studyPrograms.map((program) => (
+                  <option key={program.id} value={program.id}>{program.nama}</option>
+                ))}
+              </select>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <select name="jalurPendaftaran" defaultValue="Semua" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold">
+                  {feePaths.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+                <select name="jenisPendaftaran" defaultValue="Semua" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold">
+                  {feeTypes.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+                <Input name="minimumSkor" type="number" min={0} max={100} defaultValue={60} className="h-10 rounded-lg font-bold" required />
+              </div>
+              <Input name="gelombang" placeholder="Gelombang opsional" className="h-10 rounded-lg font-bold" />
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-600">
+                <input name="isActive" type="checkbox" defaultChecked className="h-4 w-4 accent-emerald-600" />
+                Aktif
+              </label>
+              <Button className="h-10 rounded-lg bg-slate-900 text-[10px] font-black uppercase tracking-widest text-white hover:bg-black">
+                Simpan Passing Grade
+              </Button>
+            </form>
+            <div className="mt-5 space-y-2">
+              {selectionData.passingGrades.length === 0 ? (
+                <p className="rounded-lg border border-slate-100 bg-slate-50 p-4 text-xs font-bold text-slate-500">Belum ada passing grade. Default sistem memakai skor 60.</p>
+              ) : (
+                selectionData.passingGrades.slice(0, 5).map((grade) => (
+                  <div key={grade.id} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                    <p className="text-xs font-black text-slate-900">{grade.program_studi?.nama ?? "Semua prodi"} - Min {grade.minimum_skor}</p>
+                    <p className="mt-1 text-[10px] font-bold uppercase text-slate-500">{grade.jalur_pendaftaran} / {grade.jenis_pendaftaran}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+        ) : null}
+      </div>
+
+      <Card className="overflow-hidden rounded-lg border-slate-200 bg-white p-0 shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-slate-100 bg-slate-50/70 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">Seleksi dan Wawancara</h3>
+            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Jadwal, skor, dan keputusan PMB</p>
+          </div>
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Cari calon mahasiswa"
+              className="h-10 rounded-lg border-2 border-slate-100 bg-white pl-10 text-xs font-bold"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="divide-y divide-slate-100">
+          {items.length === 0 ? (
+            <div className="p-10 text-center text-xs font-bold text-slate-500">
+              Belum ada pendaftar yang siap seleksi. Verifikasi pembayaran PMB terlebih dahulu.
+            </div>
+          ) : (
+            items.map((item) => {
+              const schedule = scheduleByPmb.get(item.id);
+              const scores = scoresByPmb.get(item.id);
+              const finalScore = calculateSelectionScore(selectionData.components, scores);
+              return (
+                <div key={item.id} className="grid gap-5 p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-[10px] font-bold text-slate-400">{item.nomor_pendaftaran}</p>
+                      <h4 className="mt-1 text-sm font-black uppercase text-slate-900">{item.nama_lengkap}</h4>
+                      <p className="mt-1 text-[10px] font-bold uppercase text-slate-500">{item.program_studi?.nama ?? "-"} / {item.email}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className={cn("rounded-md px-2 text-[8px] font-black uppercase", seleksiBadgeClass(item.status_seleksi))}>
+                        {item.status_seleksi}
+                      </Badge>
+                      <Badge variant="outline" className="rounded-md px-2 text-[8px] font-black uppercase">
+                        Skor {finalScore === null ? item.skor_seleksi ?? "-" : finalScore.toFixed(2)}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <form action={savePmbSelectionScheduleAction} className="grid gap-3 rounded-lg border border-slate-100 bg-slate-50 p-4 md:grid-cols-5">
+                    <input type="hidden" name="pmbRegistrationId" value={item.id} />
+                    <select name="tipe" defaultValue={schedule?.tipe ?? "Wawancara"} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold">
+                      <option value="Wawancara">Wawancara</option>
+                      <option value="Tes Tulis">Tes Tulis</option>
+                      <option value="Administrasi">Administrasi</option>
+                      <option value="Lainnya">Lainnya</option>
+                    </select>
+                    <Input name="scheduledAt" type="datetime-local" defaultValue={toDateTimeInput(schedule?.scheduled_at)} className="h-10 rounded-lg font-bold" required />
+                    <Input name="lokasi" placeholder="Lokasi/link" defaultValue={schedule?.lokasi ?? ""} className="h-10 rounded-lg font-bold" />
+                    <select name="interviewerId" defaultValue={schedule?.interviewer_id ?? ""} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold">
+                      <option value="">Pewawancara</option>
+                      {lecturers.map((lecturer) => (
+                        <option key={lecturer.id} value={lecturer.id}>
+                          {lecturer.users?.full_name ?? lecturer.nidn ?? lecturer.id}
+                        </option>
+                      ))}
+                    </select>
+                    <Button className="h-10 rounded-lg bg-indigo-600 text-[10px] font-black uppercase tracking-widest text-white hover:bg-indigo-700">
+                      Jadwalkan
+                    </Button>
+                  </form>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {selectionData.components.filter((component) => component.is_active).map((component) => {
+                      const score = scores?.get(component.id);
+                      return (
+                        <form key={component.id} action={savePmbSelectionScoreAction} className="grid gap-2 rounded-lg border border-slate-100 bg-white p-4">
+                          <input type="hidden" name="pmbRegistrationId" value={item.id} />
+                          <input type="hidden" name="componentId" value={component.id} />
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <p className="text-xs font-black uppercase text-slate-900">{component.nama}</p>
+                              <p className="text-[10px] font-bold text-slate-500">Bobot {component.bobot}% / Maks {component.skor_maks}</p>
+                            </div>
+                            <Input name="skor" type="number" min={0} max={Number(component.skor_maks)} defaultValue={score?.skor ?? ""} className="h-9 w-24 rounded-lg text-center font-black" required />
+                          </div>
+                          <Input name="catatan" placeholder="Catatan opsional" defaultValue={score?.catatan ?? ""} className="h-9 rounded-lg text-xs font-bold" />
+                          <Button variant="outline" className="h-9 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                            Simpan Nilai
+                          </Button>
+                        </form>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 p-4">
+                    <p className="text-xs font-bold text-slate-600">
+                      Finalisasi akan menghitung skor berbobot dan membandingkan dengan passing grade.
+                    </p>
+                    <form action={finalizePmbSelectionAction}>
+                      <input type="hidden" name="pmbRegistrationId" value={item.id} />
+                      <Button disabled={item.status_seleksi === "LULUS" || item.status_seleksi === "DITOLAK"} className="h-10 rounded-lg bg-emerald-600 px-5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700 disabled:opacity-50">
+                        Finalisasi Hasil
+                      </Button>
+                    </form>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </Card>
+    </div>
   );
 }
 

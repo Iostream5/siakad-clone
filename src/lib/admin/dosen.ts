@@ -30,17 +30,19 @@ type DosenQueryRow = {
   status_dosen: string;
   homebase_prodi_id: string | null;
   updated_at: string;
-  users: Array<{
+  users: RelationOne<{
     id: string;
     full_name: string;
     email: string;
     is_active: boolean;
-  }> | null;
-  program_studi: Array<{
+  }>;
+  program_studi: RelationOne<{
     id: string;
     nama: string;
-  }> | null;
+  }>;
 };
+
+type RelationOne<T> = T | T[] | null;
 
 export type DosenListResult = {
   items: DosenRow[];
@@ -54,13 +56,17 @@ function normalizeQuery(value?: string) {
   return (value ?? "").trim();
 }
 
-function applySearch(queryBuilder: any, query: string) {
+function applySearch<T extends { or: (filters: string) => T }>(queryBuilder: T, query: string) {
   if (!query) return queryBuilder;
   const escaped = query.replace(/[%_,]/g, "");
   // Search in NIDN, NIP or via related user table (full_name)
   // Note: Complex nested search in Supabase might require raw filters or search on users first.
   // For simplicity here, we search NIDN and NIP. 
   return queryBuilder.or(`nidn.ilike.%${escaped}%,nip.ilike.%${escaped}%`);
+}
+
+function getRelationObject<T>(relation: RelationOne<T>) {
+  return Array.isArray(relation) ? relation[0] ?? null : relation;
 }
 
 export async function getDosenIdByUserId(userId: string) {
@@ -115,8 +121,8 @@ export async function listDosen(params: { query?: string; page?: number; pageSiz
     status_dosen: item.status_dosen,
     homebase_prodi_id: item.homebase_prodi_id,
     updated_at: item.updated_at,
-    users: item.users?.[0] ?? null,
-    program_studi: item.program_studi?.[0] ?? null,
+    users: getRelationObject(item.users),
+    program_studi: getRelationObject(item.program_studi),
   }));
 
   return {
@@ -224,8 +230,8 @@ export async function exportDosen(query?: string) {
     nip: item.nip,
     gelar: item.gelar,
     status_dosen: item.status_dosen,
-    fullName: item.users?.[0]?.full_name,
-    email: item.users?.[0]?.email,
-    prodi: item.program_studi?.[0]?.nama,
+    fullName: getRelationObject(item.users)?.full_name,
+    email: getRelationObject(item.users)?.email,
+    prodi: getRelationObject(item.program_studi)?.nama,
   }));
 }

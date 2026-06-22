@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-import { Search, FileText, CheckCircle, XCircle } from "lucide-react";
+import { Search, CheckCircle, XCircle } from "lucide-react";
+import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,12 +20,14 @@ export function RegistrasiManager({
   registrasiData,
   userRole,
   tahunAkademikList,
-  prodiList
+  prodiList,
+  studentHasActiveTagihan = false,
 }: {
   registrasiData: RegistrasiRow[],
   userRole: string,
   tahunAkademikList: { id: string; nama: string; kode: string }[],
-  prodiList: { id: string; nama: string; kode: string }[]
+  prodiList: { id: string; nama: string; kode: string }[],
+  studentHasActiveTagihan?: boolean,
 }) {
   const [activeTab, setActiveTab] = useState("mahasiswa");
   const [search, setSearch] = useState("");
@@ -32,9 +35,11 @@ export function RegistrasiManager({
   const [filterTahunAkademik, setFilterTahunAkademik] = useState("ALL");
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isStudent = userRole === "Mahasiswa";
+  const canManageRegistrasi = userRole === "Admin" || userRole === "Keuangan";
 
   const filteredData = registrasiData.filter(item => {
-    if (filterProdi !== "ALL" && item.mahasiswa?.program_studi?.nama !== filterProdi) return false;
+    if (filterProdi !== "ALL" && item.mahasiswa?.prodi_id !== filterProdi) return false;
     if (filterTahunAkademik !== "ALL" && item.tahun_akademik_id !== filterTahunAkademik) return false;
     if (filterStatus !== "ALL" && item.status !== filterStatus) return false;
     if (search) {
@@ -53,7 +58,7 @@ export function RegistrasiManager({
       const res = await verifyRegistrasiAction({ registrasiId: id });
       if (res.error) alert(res.error);
       else alert("Registrasi berhasil diverifikasi");
-    } catch (e) {
+    } catch {
       alert("Terjadi kesalahan");
     } finally {
       setIsSubmitting(false);
@@ -68,7 +73,7 @@ export function RegistrasiManager({
       const res = await grantDispensasiAction({ registrasiId: id, catatan });
       if (res.error) alert(res.error);
       else alert("Dispensasi berhasil diberikan");
-    } catch (e) {
+    } catch {
       alert("Terjadi kesalahan");
     } finally {
       setIsSubmitting(false);
@@ -79,7 +84,11 @@ export function RegistrasiManager({
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Registrasi Semester</h1>
-        <p className="text-slate-500">Kelola daftar ulang mahasiswa berdasarkan pembayaran semester</p>
+        <p className="text-slate-500">
+          {isStudent
+            ? "Lihat status daftar ulang semester Anda."
+            : "Kelola daftar ulang mahasiswa berdasarkan pembayaran semester"}
+        </p>
       </div>
 
       <Card className="p-6">
@@ -87,11 +96,11 @@ export function RegistrasiManager({
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <TabsList>
               <TabsTrigger value="mahasiswa">Daftar Mahasiswa</TabsTrigger>
-              <TabsTrigger value="verifikasi">Verifikasi (Keuangan)</TabsTrigger>
+              {!isStudent ? <TabsTrigger value="verifikasi">Verifikasi (Keuangan)</TabsTrigger> : null}
               <TabsTrigger value="riwayat">Riwayat</TabsTrigger>
             </TabsList>
 
-            <div className="flex items-center gap-2">
+            {!isStudent ? <div className="flex items-center gap-2">
               <div className="relative w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
                 <Input
@@ -101,7 +110,7 @@ export function RegistrasiManager({
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
-            </div>
+            </div> : null}
           </div>
 
           <div className="mt-4 flex flex-wrap gap-4">
@@ -116,7 +125,7 @@ export function RegistrasiManager({
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-48">
+            {!isStudent ? <div className="w-48">
               <Select value={filterProdi} onValueChange={setFilterProdi}>
                 <SelectTrigger><SelectValue placeholder="Program Studi" /></SelectTrigger>
                 <SelectContent>
@@ -126,7 +135,7 @@ export function RegistrasiManager({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </div> : null}
             <div className="w-48">
               <Select value={filterStatus} onValueChange={setFilterStatus}>
                 <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
@@ -140,7 +149,7 @@ export function RegistrasiManager({
               </Select>
             </div>
 
-            {(userRole === "Admin" || userRole === "Keuangan") && (
+            {canManageRegistrasi && (
               <div className="flex-1 md:text-right">
                 <Button onClick={async () => {
                   if (filterTahunAkademik === "ALL") {
@@ -149,24 +158,15 @@ export function RegistrasiManager({
                   }
                   if (!confirm("Generate daftar ulang massal untuk data yang difilter?")) return;
 
-                  const mahasiswaIds = filteredData
-                    .filter(d => !d.status || d.status === "BELUM")
-                    .map(d => d.mahasiswa_id);
-
-                  if (mahasiswaIds.length === 0) {
-                    alert("Tidak ada data mahasiswa baru/belum daftar ulang untuk digenerate pada filter ini");
-                    return;
-                  }
-
                   setIsSubmitting(true);
                   try {
                     const res = await generateRegistrasiAction({
-                      mahasiswaIds,
-                      tahunAkademikId: filterTahunAkademik
+                      tahunAkademikId: filterTahunAkademik,
+                      prodiId: filterProdi === "ALL" ? null : filterProdi,
                     });
-                    if (res.error) alert(res.error);
-                    else alert("Generate massal berhasil");
-                  } catch (e) {
+                    if ("error" in res && res.error) alert(res.error);
+                    else alert(`Generate selesai. Dibuat: ${res.created ?? 0}, dilewati: ${res.skipped ?? 0}.`);
+                  } catch {
                     alert("Terjadi kesalahan");
                   } finally {
                     setIsSubmitting(false);
@@ -191,7 +191,22 @@ export function RegistrasiManager({
                   </TR>
                 </THead>
                 <TBody>
-                  {filteredData.map(item => (
+                  {filteredData.length === 0 ? (
+                    <TR>
+                      <TD colSpan={5} className="py-10 text-center text-slate-500 italic">
+                        {isStudent && studentHasActiveTagihan ? (
+                          <div className="space-y-3">
+                            <p>Registrasi semester belum dibuat, tapi tagihan semester sudah tersedia.</p>
+                            <Link href="/dashboard/keuangan?tab=tagihan" className="inline-flex h-10 items-center justify-center rounded-none bg-emerald-600 px-4 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-700">
+                              Buka daftar tagihan
+                            </Link>
+                          </div>
+                        ) : (
+                          "Belum ada data registrasi semester."
+                        )}
+                      </TD>
+                    </TR>
+                  ) : filteredData.map(item => (
                     <TR key={item.id}>
                       <TD className="font-medium text-slate-900">{item.mahasiswa?.users?.full_name ?? "-"}</TD>
                       <TD>{item.mahasiswa?.nim ?? "-"}</TD>
@@ -227,7 +242,7 @@ export function RegistrasiManager({
                   </TR>
                 </THead>
                 <TBody>
-                  {filteredData.filter(d => d.status === "MENUNGGU" || d.status === "BELUM").map(item => (
+                  {filteredData.map(item => (
                     <TR key={item.id}>
                       <TD>
                         <p className="font-medium text-slate-900">{item.mahasiswa?.users?.full_name}</p>
@@ -242,20 +257,35 @@ export function RegistrasiManager({
                         ) : "-"}
                       </TD>
                       <TD>
-                        <Badge variant={item.status === "MENUNGGU" ? "outline" : "destructive"}>{item.status}</Badge>
+                        <Badge
+                          variant={
+                            item.status === "LUNAS" ? "default" :
+                            item.status === "DISPENSASI" ? "secondary" :
+                            item.status === "MENUNGGU" ? "outline" : "destructive"
+                          }
+                        >
+                          {item.status}
+                        </Badge>
                       </TD>
                       <TD>
                         <div className="flex gap-2">
-                          <Button size="sm" onClick={() => handleVerify(item.id)} disabled={isSubmitting}>
+                          <Button size="sm" onClick={() => handleVerify(item.id)} disabled={isSubmitting || item.status === "LUNAS" || item.status === "DISPENSASI"}>
                             <CheckCircle className="mr-1 h-4 w-4" /> Verifikasi
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleDispensasi(item.id)} disabled={isSubmitting}>
+                          <Button size="sm" variant="outline" onClick={() => handleDispensasi(item.id)} disabled={isSubmitting || item.status === "LUNAS"}>
                             <XCircle className="mr-1 h-4 w-4" /> Dispensasi
                           </Button>
                         </div>
                       </TD>
                     </TR>
                   ))}
+                  {filteredData.length === 0 ? (
+                    <TR>
+                      <TD colSpan={4} className="py-10 text-center text-slate-500 italic">
+                        Belum ada data registrasi sesuai filter.
+                      </TD>
+                    </TR>
+                  ) : null}
                 </TBody>
               </Table>
             </div>

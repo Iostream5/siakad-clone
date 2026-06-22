@@ -1,7 +1,15 @@
 import "server-only";
 
 import { createHash } from "crypto";
+import { revalidatePath } from "next/cache";
 
+import { enqueueFinanceNotification, type FinanceNotificationEvent } from "@/lib/admin/notifications";
+import {
+  syncRegistrasiFromCreatedTagihan,
+  syncRegistrasiFromPaidTagihan,
+  syncRegistrasiFromPendingTagihan,
+  syncRegistrasiFromRejectedPayment,
+} from "@/lib/admin/registrasi";
 import { createAdminClient } from "@/supabase/admin";
 
 type Relation<T> = T | T[] | null | undefined;
@@ -45,6 +53,9 @@ type StudentLedgerPaymentQuery = {
   nominal: number | string;
   metode: string;
   bukti_url: string | null;
+  provider: string | null;
+  provider_reference: string | null;
+  checkout_url: string | null;
   verified_at: string | null;
   status: FinancePaymentStatus;
   created_at: string;
@@ -69,9 +80,11 @@ type PaymentVerificationQuery = {
     jenis: string;
     nominal: number | string;
     mahasiswa_id: string;
+    deleted_at?: string | null;
     mahasiswa: Relation<{
       id: string;
       nim: string | null;
+      user_id?: string | null;
       users: Relation<{
         full_name: string | null;
       }>;
@@ -88,6 +101,56 @@ type ActiveBillSyncRow = {
   id: string;
   nominal: number | string;
   status: FinanceTagihanStatus;
+};
+
+type MasterBiayaCandidate = {
+  id: string;
+  nama: string;
+  nominal: number | string;
+  tahun_akademik_id: string | null;
+  prodi_id: string | null;
+  angkatan: number | null;
+  is_active: boolean | null;
+  status: boolean | null;
+  deleted_at: string | null;
+};
+
+export type ImportTagihanMode = "skip_existing" | "update_unpaid";
+
+export type ImportTagihanInputRow = {
+  rowNumber: number;
+  nim: string;
+  tahunAkademikKode: string;
+  jenis: string;
+  nominal: number;
+  jatuhTempo: string;
+  masterBiayaNama?: string | null;
+  status?: FinanceTagihanStatus;
+};
+
+export type ImportTagihanResult = {
+  imported: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  rows: Array<{
+    rowNumber: number;
+    nim: string;
+    jenis: string;
+    status: "imported" | "updated" | "skipped" | "failed";
+    message: string;
+  }>;
+};
+
+export type UpdateTagihanInput = {
+  id: string;
+  mahasiswaId: string;
+  tahunAkademikId: string;
+  jenis: string;
+  nominal: number;
+  jatuhTempo: string;
+  status: FinanceTagihanStatus;
+  userId: string;
 };
 
 export type StudentLedgerProfile = {
@@ -123,6 +186,9 @@ export type StudentLedgerPayment = {
   nominal: number;
   metode: string;
   bukti_url: string | null;
+  provider: string | null;
+  provider_reference: string | null;
+  checkout_url: string | null;
   verified_at: string | null;
   status: FinancePaymentStatus;
   created_at: string;
@@ -172,6 +238,33 @@ function pickRelation<T>(value: Relation<T>): T | null {
   return value ?? null;
 }
 
+function formatCurrencyValue(value: number | string | null | undefined) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(Number(value ?? 0));
+}
+
+function formatDateValue(value: string | null | undefined) {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("id-ID", { dateStyle: "medium" });
+}
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function emptyImportResult(): ImportTagihanResult {
+  return {
+    imported: 0,
+    updated: 0,
+    skipped: 0,
+    failed: 0,
+    rows: [],
+  };
+}
+
 function emptyStudentLedger(): StudentLedgerData {
   return {
     mahasiswa: null,
@@ -206,6 +299,7 @@ export async function getTagihanList() {
       ),
       tahun_akademik!tagihan_tahun_akademik_id_fkey(nama)
     `)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -224,7 +318,7 @@ export async function getPembayaranList() {
     .from("pembayaran")
     .select(`
       *,
-      tagihan!pembayaran_tagihan_id_fkey(
+      tagihan!inner(
         jenis,
         mahasiswa!tagihan_mahasiswa_id_fkey(
           nim,
@@ -232,10 +326,37 @@ export async function getPembayaranList() {
         )
       )
     `)
+    .is("tagihan.deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {
     console.error("Error fetching pembayaran:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function getPmbPembayaranList() {
+  const supabase = createAdminClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("pmb_pembayaran")
+    .select(`
+      *,
+      pmb_pendaftaran!pmb_pembayaran_pmb_pendaftaran_id_fkey(
+        nomor_pendaftaran,
+        nama_lengkap,
+        email,
+        status_pembayaran,
+        program_studi!pmb_pendaftaran_prodi_pilihan_id_fkey(nama)
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching PMB pembayaran:", error);
     return [];
   }
 
@@ -248,21 +369,179 @@ export async function createTagihan(values: {
   jenis: string;
   nominal: number;
   jatuhTempo: string;
+  userId?: string;
 }) {
   const supabase = createAdminClient();
   if (!supabase) throw new Error("Supabase admin client not available");
 
-  const { error } = await supabase.from("tagihan").insert({
-    mahasiswa_id: values.mahasiswaId,
-    tahun_akademik_id: values.tahunAkademikId,
-    jenis: values.jenis,
-    nominal: values.nominal,
-    jatuh_tempo: values.jatuhTempo,
-    status: "Belum Lunas",
-  });
+  const { data, error } = await supabase
+    .from("tagihan")
+    .insert({
+      mahasiswa_id: values.mahasiswaId,
+      tahun_akademik_id: values.tahunAkademikId,
+      jenis: values.jenis,
+      nominal: values.nominal,
+      jatuh_tempo: values.jatuhTempo,
+      status: "Belum Lunas",
+      updated_by: values.userId,
+    })
+    .select(`
+      id,
+      jenis,
+      nominal,
+      jatuh_tempo,
+      mahasiswa:mahasiswa_id(user_id)
+    `)
+    .single();
 
   if (error) throw error;
-  return { success: true };
+
+  const mahasiswa = pickRelation(data?.mahasiswa);
+  if (mahasiswa?.user_id) {
+    await enqueueFinanceNotification({
+      userId: mahasiswa.user_id,
+      event: "billing.created",
+      relatedType: "tagihan",
+      relatedId: data.id,
+      href: `/dashboard/keuangan?tab=tagihan&tagihan=${data.id}`,
+      variables: {
+        jenis_tagihan: data.jenis,
+        nominal: formatCurrencyValue(data.nominal),
+        jatuh_tempo: formatDateValue(data.jatuh_tempo),
+      },
+    });
+  }
+
+  return { success: true, id: data.id };
+}
+
+async function resolveRegistrasiMasterBiaya(
+  supabase: NonNullable<ReturnType<typeof createAdminClient>>,
+  mahasiswaId: string,
+  tahunAkademikId: string,
+) {
+  const { data: mahasiswa, error: mahasiswaError } = await supabase
+    .from("mahasiswa")
+    .select("id, prodi_id, angkatan, nim, users:user_id(full_name)")
+    .eq("id", mahasiswaId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (mahasiswaError) throw mahasiswaError;
+  if (!mahasiswa) throw new Error("Mahasiswa tidak ditemukan.");
+
+  const { data: masterRows, error: masterError } = await supabase
+    .from("master_biaya")
+    .select("id, nama, nominal, tahun_akademik_id, prodi_id, angkatan, is_active, status, deleted_at")
+    .eq("tahun_akademik_id", tahunAkademikId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false });
+
+  if (masterError) throw masterError;
+
+  const candidates = ((masterRows ?? []) as MasterBiayaCandidate[]).filter((item) => {
+    if (item.deleted_at) return false;
+    if (item.is_active === false || item.status === false) return false;
+
+    const name = (item.nama ?? "").toLowerCase();
+    const target = name.includes("registrasi") || name.includes("daftar ulang") || name.includes("spp") || name.includes("ukt");
+    if (!target) return false;
+
+    if (item.prodi_id && item.prodi_id !== (mahasiswa as { prodi_id?: string | null }).prodi_id) return false;
+    if (item.angkatan && item.angkatan !== (mahasiswa as { angkatan?: number | null }).angkatan) return false;
+    return true;
+  });
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const ordered = candidates.sort((left, right) => {
+    const leftName = left.nama.toLowerCase();
+    const rightName = right.nama.toLowerCase();
+    const score = (value: string) =>
+      (value.includes("registrasi") ? 40 : 0) +
+      (value.includes("daftar ulang") ? 35 : 0) +
+      (value.includes("spp") ? 20 : 0) +
+      (value.includes("ukt") ? 15 : 0);
+    return score(rightName) - score(leftName);
+  });
+
+  return ordered[0] ?? null;
+}
+
+export async function createAutoRegistrasiTagihanForNewMahasiswa(values: {
+  mahasiswaId: string;
+  userId?: string | null;
+}) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Supabase admin client not available");
+
+  const { data: activeYear, error: activeYearError } = await supabase
+    .from("tahun_akademik")
+    .select("id, nama")
+    .eq("is_aktif", true)
+    .maybeSingle();
+
+  if (activeYearError) throw activeYearError;
+  if (!activeYear?.id) {
+    return { success: true, skipped: true, reason: "NO_ACTIVE_ACADEMIC_YEAR" as const };
+  }
+
+  const { data: existingBill, error: existingBillError } = await supabase
+    .from("tagihan")
+    .select("id, jenis, master_biaya_id")
+    .eq("mahasiswa_id", values.mahasiswaId)
+    .eq("tahun_akademik_id", activeYear.id)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false });
+
+  if (existingBillError) throw existingBillError;
+
+  const existingRegistrationBill = (existingBill ?? []).find((bill) => {
+    const jenis = bill.jenis.toLowerCase();
+    return jenis.includes("registrasi") || jenis.includes("daftar ulang") || jenis.includes("spp") || jenis.includes("ukt");
+  });
+
+  if (existingRegistrationBill?.id) {
+    await syncRegistrasiFromCreatedTagihan(existingRegistrationBill.id);
+    return { success: true, skipped: true, reason: "TAGIHAN_ALREADY_EXISTS" as const, tagihanId: existingRegistrationBill.id };
+  }
+
+  const masterBiaya = await resolveRegistrasiMasterBiaya(supabase, values.mahasiswaId, activeYear.id);
+  if (!masterBiaya) {
+    return { success: true, skipped: true, reason: "NO_REGISTRATION_MASTER_BIAYA" as const };
+  }
+
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 14);
+
+  const { data: createdBill, error: createError } = await supabase
+    .from("tagihan")
+    .insert({
+      mahasiswa_id: values.mahasiswaId,
+      tahun_akademik_id: activeYear.id,
+      master_biaya_id: masterBiaya.id,
+      jenis: masterBiaya.nama,
+      nominal: Number(masterBiaya.nominal),
+      jatuh_tempo: dueDate.toISOString().slice(0, 10),
+      status: "Belum Lunas",
+      updated_by: values.userId ?? null,
+    })
+    .select("id, jenis, nominal, jatuh_tempo")
+    .single();
+
+  if (createError) throw createError;
+
+  const syncResult = await syncRegistrasiFromCreatedTagihan(createdBill.id);
+
+  return {
+    success: true,
+    skipped: false,
+    tagihanId: createdBill.id,
+    registrasiId: syncResult.registrasiId ?? null,
+    tahunAkademikId: activeYear.id,
+  };
 }
 
 export async function getCashFlowList() {
@@ -292,7 +571,8 @@ export async function getFinanceCategories() {
   const { data, error } = await supabase
     .from("kategori_keuangan")
     .select("*")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .is("deleted_at", null);
 
   if (error) return [];
   return data || [];
@@ -324,6 +604,361 @@ export async function createCashFlow(values: {
   return { success: true };
 }
 
+export async function updateTagihan(values: UpdateTagihanInput) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Supabase admin client not available");
+
+  const { data: current, error: currentError } = await supabase
+    .from("tagihan")
+    .select("id, mahasiswa_id, tahun_akademik_id, jenis, nominal, jatuh_tempo, status")
+    .eq("id", values.id)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (currentError) throw currentError;
+  if (!current) throw new Error("Tagihan tidak ditemukan atau sudah dihapus.");
+
+  const { data: payments, error: paymentsError } = await supabase
+    .from("pembayaran")
+    .select("id, status")
+    .eq("tagihan_id", values.id);
+
+  if (paymentsError) throw paymentsError;
+
+  const hasPayments = (payments ?? []).length > 0;
+  const hasVerifiedPayment = (payments ?? []).some((payment) => payment.status === "Terverifikasi");
+  const protectedFieldsChanged =
+    current.mahasiswa_id !== values.mahasiswaId ||
+    current.tahun_akademik_id !== values.tahunAkademikId ||
+    current.jenis !== values.jenis ||
+    Number(current.nominal) !== values.nominal;
+
+  if (hasPayments && protectedFieldsChanged) {
+    throw new Error("Tagihan sudah punya pembayaran. Mahasiswa, periode, jenis, dan nominal tidak boleh diubah.");
+  }
+
+  if (hasVerifiedPayment && current.status === "Lunas" && values.status !== "Lunas") {
+    throw new Error("Tagihan lunas dengan pembayaran terverifikasi tidak boleh diturunkan statusnya.");
+  }
+
+  if (hasPayments && values.status !== current.status && values.status !== "Dispensasi") {
+    throw new Error("Tagihan dengan pembayaran hanya boleh diberi status Dispensasi.");
+  }
+
+  const payload: Record<string, unknown> = {
+    jatuh_tempo: values.jatuhTempo,
+    status: values.status,
+    updated_by: values.userId,
+  };
+
+  if (!hasPayments) {
+    payload.mahasiswa_id = values.mahasiswaId;
+    payload.tahun_akademik_id = values.tahunAkademikId;
+    payload.jenis = values.jenis;
+    payload.nominal = values.nominal;
+  }
+
+  const { error } = await supabase
+    .from("tagihan")
+    .update(payload)
+    .eq("id", values.id)
+    .is("deleted_at", null);
+
+  if (error) throw error;
+  return { success: true };
+}
+
+export async function bulkSoftDeleteTagihan(ids: string[], userId: string) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Supabase admin client not available");
+
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+  if (uniqueIds.length === 0) {
+    return { deleted: 0, skipped: 0, details: [] as Array<{ id: string; status: "deleted" | "skipped"; message: string }> };
+  }
+
+  const { data: bills, error: billsError } = await supabase
+    .from("tagihan")
+    .select("id, status")
+    .in("id", uniqueIds)
+    .is("deleted_at", null);
+
+  if (billsError) throw billsError;
+
+  const activeBillIds = (bills ?? []).map((bill) => bill.id);
+  const { data: verifiedPayments, error: paymentsError } = activeBillIds.length
+    ? await supabase
+        .from("pembayaran")
+        .select("tagihan_id")
+        .in("tagihan_id", activeBillIds)
+        .eq("status", "Terverifikasi")
+    : { data: [], error: null };
+
+  if (paymentsError) throw paymentsError;
+
+  const verifiedBillIds = new Set((verifiedPayments ?? []).map((payment) => payment.tagihan_id));
+  const existingBills = new Map((bills ?? []).map((bill) => [bill.id, bill]));
+  const details: Array<{ id: string; status: "deleted" | "skipped"; message: string }> = [];
+  const deletableIds: string[] = [];
+
+  for (const id of uniqueIds) {
+    const bill = existingBills.get(id);
+    if (!bill) {
+      details.push({ id, status: "skipped", message: "Tagihan tidak ditemukan atau sudah dihapus." });
+      continue;
+    }
+    if (bill.status === "Lunas") {
+      details.push({ id, status: "skipped", message: "Tagihan lunas tidak boleh dihapus." });
+      continue;
+    }
+    if (verifiedBillIds.has(id)) {
+      details.push({ id, status: "skipped", message: "Tagihan punya pembayaran terverifikasi." });
+      continue;
+    }
+
+    deletableIds.push(id);
+  }
+
+  if (deletableIds.length > 0) {
+    const { error } = await supabase
+      .from("tagihan")
+      .update({
+        deleted_at: new Date().toISOString(),
+        deleted_by: userId,
+        updated_by: userId,
+      })
+      .in("id", deletableIds)
+      .is("deleted_at", null);
+
+    if (error) throw error;
+    details.push(...deletableIds.map((id) => ({ id, status: "deleted" as const, message: "Tagihan dihapus." })));
+  }
+
+  return {
+    deleted: deletableIds.length,
+    skipped: details.filter((item) => item.status === "skipped").length,
+    details,
+  };
+}
+
+export async function softDeleteTagihan(id: string, userId: string) {
+  return bulkSoftDeleteTagihan([id], userId);
+}
+
+async function notifyTagihanRows(
+  bills: Array<{
+    id: string;
+    jenis: string;
+    nominal: number | string;
+    jatuh_tempo: string;
+    mahasiswa?: Relation<{ user_id?: string | null }>;
+  }>,
+  event: FinanceNotificationEvent,
+) {
+  let sent = 0;
+  let skipped = 0;
+  const keyDate = todayKey();
+
+  for (const bill of bills) {
+    const mahasiswa = pickRelation(bill.mahasiswa);
+    if (!mahasiswa?.user_id) {
+      skipped += 1;
+      continue;
+    }
+
+    await enqueueFinanceNotification({
+      userId: mahasiswa.user_id,
+      event,
+      relatedType: "tagihan",
+      relatedId: bill.id,
+      href: `/dashboard/keuangan?tab=tagihan&tagihan=${bill.id}`,
+      variables: {
+        jenis_tagihan: bill.jenis,
+        nominal: formatCurrencyValue(bill.nominal),
+        jatuh_tempo: formatDateValue(bill.jatuh_tempo),
+      },
+      idempotencyKey: `finance:${event}:${mahasiswa.user_id}:${bill.id}:${keyDate}`,
+    });
+    sent += 1;
+  }
+
+  return { sent, skipped };
+}
+
+export async function sendTagihanNotification(ids: string[], event: FinanceNotificationEvent = "billing.manual_reminder") {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Supabase admin client not available");
+
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+  if (uniqueIds.length === 0) return { sent: 0, skipped: 0 };
+
+  const { data, error } = await supabase
+    .from("tagihan")
+    .select("id, jenis, nominal, jatuh_tempo, mahasiswa:mahasiswa_id(user_id)")
+    .in("id", uniqueIds)
+    .neq("status", "Lunas")
+    .is("deleted_at", null);
+
+  if (error) throw error;
+  return notifyTagihanRows(data ?? [], event);
+}
+
+export async function sendOverdueTagihanNotifications() {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Supabase admin client not available");
+
+  const { data, error } = await supabase
+    .from("tagihan")
+    .select("id, jenis, nominal, jatuh_tempo, mahasiswa:mahasiswa_id(user_id)")
+    .lt("jatuh_tempo", todayKey())
+    .neq("status", "Lunas")
+    .is("deleted_at", null);
+
+  if (error) throw error;
+  return notifyTagihanRows(data ?? [], "billing.overdue");
+}
+
+export async function importTagihanRows(rows: ImportTagihanInputRow[], mode: ImportTagihanMode, userId: string) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Supabase admin client not available");
+
+  if (rows.length === 0) return emptyImportResult();
+
+  const result = emptyImportResult();
+  for (const row of rows) {
+    try {
+      const { data: mahasiswa, error: mahasiswaError } = await supabase
+        .from("mahasiswa")
+        .select("id, user_id")
+        .eq("nim", row.nim)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (mahasiswaError) throw mahasiswaError;
+      if (!mahasiswa) throw new Error("NIM tidak ditemukan.");
+
+      const { data: tahunAkademik, error: tahunError } = await supabase
+        .from("tahun_akademik")
+        .select("id, nama")
+        .eq("kode", row.tahunAkademikKode)
+        .maybeSingle();
+
+      if (tahunError) throw tahunError;
+      if (!tahunAkademik) throw new Error("Kode tahun akademik tidak ditemukan.");
+
+      let masterBiayaId: string | null = null;
+      if (row.masterBiayaNama) {
+        const { data: master, error: masterError } = await supabase
+          .from("master_biaya")
+          .select("id")
+          .eq("nama", row.masterBiayaNama)
+          .is("deleted_at", null)
+          .limit(1)
+          .maybeSingle();
+
+        if (masterError) throw masterError;
+        if (!master) throw new Error("Master biaya tidak ditemukan.");
+        masterBiayaId = master.id;
+      }
+
+      const { data: existing, error: existingError } = await supabase
+        .from("tagihan")
+        .select("id")
+        .eq("mahasiswa_id", mahasiswa.id)
+        .eq("tahun_akademik_id", tahunAkademik.id)
+        .eq("jenis", row.jenis)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (existingError) throw existingError;
+
+      if (existing) {
+        if (mode === "skip_existing") {
+          result.skipped += 1;
+          result.rows.push({ rowNumber: row.rowNumber, nim: row.nim, jenis: row.jenis, status: "skipped", message: "Tagihan aktif sudah ada." });
+          continue;
+        }
+
+        const { data: existingPayments, error: existingPaymentsError } = await supabase
+          .from("pembayaran")
+          .select("id")
+          .eq("tagihan_id", existing.id)
+          .limit(1);
+
+        if (existingPaymentsError) throw existingPaymentsError;
+        if ((existingPayments ?? []).length > 0) {
+          result.skipped += 1;
+          result.rows.push({ rowNumber: row.rowNumber, nim: row.nim, jenis: row.jenis, status: "skipped", message: "Tagihan sudah punya pembayaran." });
+          continue;
+        }
+
+        const { error: updateError } = await supabase
+          .from("tagihan")
+          .update({
+            nominal: row.nominal,
+            jatuh_tempo: row.jatuhTempo,
+            status: row.status ?? "Belum Lunas",
+            master_biaya_id: masterBiayaId,
+            updated_by: userId,
+          })
+          .eq("id", existing.id)
+          .is("deleted_at", null);
+
+        if (updateError) throw updateError;
+        result.updated += 1;
+        result.rows.push({ rowNumber: row.rowNumber, nim: row.nim, jenis: row.jenis, status: "updated", message: "Tagihan diperbarui." });
+        continue;
+      }
+
+      const { data: inserted, error: insertError } = await supabase
+        .from("tagihan")
+        .insert({
+          mahasiswa_id: mahasiswa.id,
+          tahun_akademik_id: tahunAkademik.id,
+          master_biaya_id: masterBiayaId,
+          jenis: row.jenis,
+          nominal: row.nominal,
+          jatuh_tempo: row.jatuhTempo,
+          status: row.status ?? "Belum Lunas",
+          updated_by: userId,
+        })
+        .select("id, jenis, nominal, jatuh_tempo")
+        .single();
+
+      if (insertError) throw insertError;
+
+      if (mahasiswa.user_id) {
+        await enqueueFinanceNotification({
+          userId: mahasiswa.user_id,
+          event: "billing.created",
+          relatedType: "tagihan",
+          relatedId: inserted.id,
+          href: `/dashboard/keuangan?tab=tagihan&tagihan=${inserted.id}`,
+          variables: {
+            jenis_tagihan: inserted.jenis,
+            nominal: formatCurrencyValue(inserted.nominal),
+            jatuh_tempo: formatDateValue(inserted.jatuh_tempo),
+          },
+        });
+      }
+
+      result.imported += 1;
+      result.rows.push({ rowNumber: row.rowNumber, nim: row.nim, jenis: row.jenis, status: "imported", message: "Tagihan diimpor." });
+    } catch (error) {
+      result.failed += 1;
+      result.rows.push({
+        rowNumber: row.rowNumber,
+        nim: row.nim,
+        jenis: row.jenis,
+        status: "failed",
+        message: error instanceof Error ? error.message : "Baris gagal diproses.",
+      });
+    }
+  }
+
+  return result;
+}
+
 export async function verifikasiPembayaran(pembayaranId: string, verifierId: string, status: "Terverifikasi" | "Ditolak") {
   const supabase = createAdminClient();
   if (!supabase) throw new Error("Supabase admin client not available");
@@ -338,9 +973,11 @@ export async function verifikasiPembayaran(pembayaranId: string, verifierId: str
         jenis,
         nominal,
         mahasiswa_id,
+        deleted_at,
         mahasiswa!tagihan_mahasiswa_id_fkey(
           id,
           nim,
+          user_id,
           users!mahasiswa_user_id_fkey(full_name)
         )
       )
@@ -356,10 +993,15 @@ export async function verifikasiPembayaran(pembayaranId: string, verifierId: str
   const userData = pickRelation(mahasiswaData?.users);
   const mahasiswaId = tagihanData?.mahasiswa_id ?? mahasiswaData?.id ?? null;
 
+  if (tagihanData?.deleted_at) {
+    throw new Error("Tagihan sudah dihapus.");
+  }
+
+  const verifiedAt = new Date().toISOString();
   const { error } = await supabase.from("pembayaran").update({
     status,
     verified_by: verifierId,
-    verified_at: new Date().toISOString(),
+    verified_at: verifiedAt,
   }).eq("id", pembayaranId);
 
   if (error) throw error;
@@ -378,10 +1020,17 @@ export async function verifikasiPembayaran(pembayaranId: string, verifierId: str
       .from("tagihan")
       .select("nominal")
       .eq("id", paymentData.tagihan_id)
+      .is("deleted_at", null)
       .single();
 
     if (tagihan && totalPaid >= Number(tagihan.nominal)) {
       await supabase.from("tagihan").update({ status: "Lunas" }).eq("id", paymentData.tagihan_id);
+      await syncRegistrasiFromPaidTagihan(paymentData.tagihan_id, {
+        verifiedBy: verifierId,
+        verifiedAt,
+      });
+    } else {
+      await syncRegistrasiFromPendingTagihan(paymentData.tagihan_id);
     }
 
     // 2. Automagically add to arus_kas
@@ -391,15 +1040,42 @@ export async function verifikasiPembayaran(pembayaranId: string, verifierId: str
       .eq("nama", "SPP / UKT Mahasiswa")
       .single();
 
-    await supabase.from("arus_kas").insert({
-      tanggal: new Date().toISOString().split('T')[0],
-      kategori_id: category?.id,
-      tipe: "Masuk",
-      judul: `Pembayaran ${tagihanData?.jenis || 'Tagihan'}`,
-      deskripsi: `Pembayaran dari ${userData?.full_name || 'Mahasiswa'} (${mahasiswaData?.nim || '-'})`,
-      nominal: paymentData.nominal,
-      referensi_id: pembayaranId,
-      created_by: verifierId,
+    const { data: existingCashFlow } = await supabase
+      .from("arus_kas")
+      .select("id")
+      .eq("referensi_id", pembayaranId)
+      .maybeSingle();
+
+    if (!existingCashFlow) {
+      await supabase.from("arus_kas").insert({
+        tanggal: new Date().toISOString().split('T')[0],
+        kategori_id: category?.id,
+        tipe: "Masuk",
+        judul: `Pembayaran ${tagihanData?.jenis || 'Tagihan'}`,
+        deskripsi: `Pembayaran dari ${userData?.full_name || 'Mahasiswa'} (${mahasiswaData?.nim || '-'})`,
+        nominal: paymentData.nominal,
+        referensi_id: pembayaranId,
+        created_by: verifierId,
+      });
+    }
+  } else {
+    await syncRegistrasiFromRejectedPayment(paymentData.tagihan_id);
+  }
+
+  const studentUserId = mahasiswaData?.user_id ?? null;
+  if (studentUserId) {
+    await enqueueFinanceNotification({
+      userId: studentUserId,
+      event: status === "Terverifikasi" ? "payment.success" : "payment.rejected",
+      relatedType: "pembayaran",
+      relatedId: pembayaranId,
+      href: `/dashboard/keuangan?tab=pembayaran&pembayaran=${pembayaranId}`,
+      variables: {
+        jenis_tagihan: tagihanData?.jenis ?? "Tagihan",
+        nominal: formatCurrencyValue(paymentData.nominal),
+        tanggal_bayar: formatDateValue(new Date().toISOString()),
+      },
+      idempotencyKey: `finance:${status}:${studentUserId}:${pembayaranId}`,
     });
   }
 
@@ -449,11 +1125,12 @@ export async function getStudentLedger(mahasiswaId: string): Promise<StudentLedg
         tahun_akademik!tagihan_tahun_akademik_id_fkey(nama)
       `)
       .eq("mahasiswa_id", mahasiswaId)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false }),
     supabase
       .from("pembayaran")
       .select(`
-        id, tagihan_id, tanggal_bayar, nominal, metode, bukti_url, verified_at, status, created_at,
+        id, tagihan_id, tanggal_bayar, nominal, metode, bukti_url, provider, provider_reference, checkout_url, verified_at, status, created_at,
         tagihan!inner(
           id, jenis, nominal, status, jatuh_tempo,
           tahun_akademik!tagihan_tahun_akademik_id_fkey(nama)
@@ -461,6 +1138,7 @@ export async function getStudentLedger(mahasiswaId: string): Promise<StudentLedg
         verified_user:users!pembayaran_verified_by_fkey(full_name)
       `)
       .eq("tagihan.mahasiswa_id", mahasiswaId)
+      .is("tagihan.deleted_at", null)
       .order("tanggal_bayar", { ascending: false })
   ]);
 
@@ -496,6 +1174,9 @@ export async function getStudentLedger(mahasiswaId: string): Promise<StudentLedg
       nominal: Number(item.nominal),
       metode: item.metode,
       bukti_url: item.bukti_url,
+      provider: item.provider,
+      provider_reference: item.provider_reference,
+      checkout_url: item.checkout_url,
       verified_at: item.verified_at,
       status: item.status,
       created_at: item.created_at,
@@ -641,7 +1322,8 @@ export async function syncStudentStatus(mahasiswaId: string) {
     .from("tagihan")
     .select("id, nominal, status")
     .eq("mahasiswa_id", mahasiswaId)
-    .eq("tahun_akademik_id", activeYear.id);
+    .eq("tahun_akademik_id", activeYear.id)
+    .is("deleted_at", null);
 
   if (billsError) throw billsError;
 
@@ -758,8 +1440,47 @@ type MidtransFinanceNotificationPayload = {
   transaction_id?: unknown;
 };
 
+type SettingValueContainer = {
+  value?: unknown;
+};
+
+type MidtransSnapResponse = {
+  redirect_url?: string;
+};
+
+type PendingGatewayPaymentRow = {
+  id: string;
+  checkout_url: string | null;
+  provider: string | null;
+  status: FinancePaymentStatus;
+  created_at: string;
+};
+
+const MIDTRANS_PAYMENT_SESSION_TTL_MS = 14 * 60 * 1000;
+
 const MIDTRANS_SANDBOX_SNAP_URL = "https://app.sandbox.midtrans.com/snap/v1/transactions";
 const MIDTRANS_PRODUCTION_SNAP_URL = "https://app.midtrans.com/snap/v1/transactions";
+const MIDTRANS_DEFAULT_ENABLED_PAYMENTS = [
+  "bank_transfer",
+  "bca_va",
+  "bni_va",
+  "bri_va",
+  "permata_va",
+  "other_va",
+  "gopay",
+  "shopeepay",
+  "qris",
+  "credit_card",
+];
+
+function readSettingValue(settings: { key: string; value: unknown }[], key: string) {
+  const rawValue = settings.find((setting) => setting.key === key)?.value;
+  if (rawValue && typeof rawValue === "object" && !Array.isArray(rawValue) && "value" in rawValue) {
+    return (rawValue as SettingValueContainer).value;
+  }
+
+  return rawValue;
+}
 
 async function getMidtransConfig(): Promise<MidtransConfig | null> {
   const supabase = createAdminClient();
@@ -772,18 +1493,16 @@ async function getMidtransConfig(): Promise<MidtransConfig | null> {
 
   if (error || !settings) return null;
 
-  const enabledSetting = settings.find(s => s.key === "payment.midtrans.enabled")?.value as any;
-  const isEnabled = enabledSetting?.value === true;
+  const isEnabled = readSettingValue(settings, "payment.midtrans.enabled") === true;
   
   if (!isEnabled) return null;
 
-  const serverKeySetting = settings.find(s => s.key === "payment.midtrans.server_key")?.value as any;
-  const serverKey = serverKeySetting?.value?.trim();
+  const serverKeySetting = readSettingValue(settings, "payment.midtrans.server_key");
+  const serverKey = typeof serverKeySetting === "string" ? serverKeySetting.trim() : "";
   
   if (!serverKey) return null;
 
-  const isProductionSetting = settings.find(s => s.key === "payment.midtrans.is_production")?.value as any;
-  const isProduction = isProductionSetting?.value === true;
+  const isProduction = readSettingValue(settings, "payment.midtrans.is_production") === true;
 
   return {
     provider: "midtrans",
@@ -798,6 +1517,30 @@ function getPublicAppUrl() {
   if (configured?.trim()) return configured.trim().replace(/\/+$/, "");
   const vercelUrl = process.env.VERCEL_URL?.trim();
   return vercelUrl ? `https://${vercelUrl.replace(/\/+$/, "")}` : null;
+}
+
+function isCheckoutUrlForCurrentEnvironment(checkoutUrl: string, isProduction: boolean) {
+  try {
+    const hostname = new URL(checkoutUrl).hostname;
+    return isProduction
+      ? hostname === "app.midtrans.com"
+      : hostname === "app.sandbox.midtrans.com";
+  } catch {
+    return false;
+  }
+}
+
+function isReusableGatewayPayment(payment: PendingGatewayPaymentRow, isProduction: boolean) {
+  if (payment.status !== "Menunggu") return false;
+  if (!payment.checkout_url) return false;
+  if (!isCheckoutUrlForCurrentEnvironment(payment.checkout_url, isProduction)) return false;
+
+  const createdAt = new Date(payment.created_at);
+  if (Number.isNaN(createdAt.getTime())) return false;
+
+  const ageMs = Date.now() - createdAt.getTime();
+  const maxAgeMs = MIDTRANS_PAYMENT_SESSION_TTL_MS;
+  return ageMs <= maxAgeMs;
 }
 
 export async function requestFinancePaymentGateway(values: {
@@ -820,6 +1563,7 @@ export async function requestFinancePaymentGateway(values: {
       mahasiswa:mahasiswa_id(id, nim, user_id, users:user_id(full_name, email))
     `)
     .eq("id", values.tagihanId)
+    .is("deleted_at", null)
     .single();
 
   if (error || !tagihan) {
@@ -837,10 +1581,23 @@ export async function requestFinancePaymentGateway(values: {
 
   const amount = Number(tagihan.nominal);
 
+  const staleGatewayCutoff = new Date(Date.now() - MIDTRANS_PAYMENT_SESSION_TTL_MS).toISOString();
+  const { error: cleanupError } = await supabase
+    .from("pembayaran")
+    .update({ status: "Ditolak" })
+    .eq("tagihan_id", tagihan.id)
+    .eq("metode", "Payment Gateway")
+    .eq("status", "Menunggu")
+    .lt("created_at", staleGatewayCutoff);
+
+  if (cleanupError) {
+    console.warn("[finance] failed to expire stale gateway payments", cleanupError);
+  }
+
   // 2. Cek apakah sudah ada pembayaran pending dengan checkout_url
   const { data: existingPayment } = await supabase
     .from("pembayaran")
-    .select("id, checkout_url, provider")
+    .select("id, checkout_url, provider, status, created_at")
     .eq("tagihan_id", tagihan.id)
     .eq("metode", "Payment Gateway")
     .eq("status", "Menunggu")
@@ -849,12 +1606,28 @@ export async function requestFinancePaymentGateway(values: {
     .limit(1)
     .maybeSingle();
 
-  if (existingPayment?.checkout_url) {
+  const reusablePayment = existingPayment as PendingGatewayPaymentRow | null;
+  if (reusablePayment && isReusableGatewayPayment(reusablePayment, midtrans.isProduction)) {
+    await syncRegistrasiFromPendingTagihan(tagihan.id);
     return {
-      provider: existingPayment.provider ?? midtrans.provider,
-      paymentId: existingPayment.id,
-      checkoutUrl: existingPayment.checkout_url as string,
+      provider: reusablePayment.provider ?? midtrans.provider,
+      paymentId: reusablePayment.id,
+      checkoutUrl: reusablePayment.checkout_url as string,
     };
+  }
+
+  if (reusablePayment?.id && reusablePayment.status === "Menunggu") {
+    const { error: expireError } = await supabase
+      .from("pembayaran")
+      .update({
+        status: "Ditolak",
+      })
+      .eq("id", reusablePayment.id)
+      .eq("status", "Menunggu");
+
+    if (expireError) {
+      console.warn("[finance] failed to mark stale gateway payment", expireError);
+    }
   }
 
   const userData = pickRelation(mahasiswaData?.users);
@@ -866,6 +1639,7 @@ export async function requestFinancePaymentGateway(values: {
       order_id: orderId,
       gross_amount: Math.round(amount),
     },
+    enabled_payments: MIDTRANS_DEFAULT_ENABLED_PAYMENTS,
     customer_details: {
       first_name: userData?.full_name || "Mahasiswa",
       email: userData?.email || "mahasiswa@stai.edu",
@@ -878,6 +1652,7 @@ export async function requestFinancePaymentGateway(values: {
         name: tagihan.jenis,
       },
     ],
+    notification_url: appUrl ? `${appUrl}/api/payment-gateway/midtrans/finance` : undefined,
     callbacks: appUrl
       ? {
           finish: `${appUrl}/dashboard/keuangan?tab=tagihan`,
@@ -896,9 +1671,15 @@ export async function requestFinancePaymentGateway(values: {
   });
 
   const responseText = await response.text();
-  let snapResponse: any = {};
+  let snapResponse: MidtransSnapResponse = {};
   try {
-    snapResponse = JSON.parse(responseText);
+    const parsed: unknown = JSON.parse(responseText);
+    if (parsed && typeof parsed === "object" && "redirect_url" in parsed) {
+      const redirectUrl = (parsed as { redirect_url?: unknown }).redirect_url;
+      snapResponse = {
+        redirect_url: typeof redirectUrl === "string" ? redirectUrl : undefined,
+      };
+    }
   } catch {}
 
   if (!response.ok || !snapResponse.redirect_url) {
@@ -920,6 +1701,7 @@ export async function requestFinancePaymentGateway(values: {
     .single();
 
   if (paymentError) throw paymentError;
+  await syncRegistrasiFromPendingTagihan(tagihan.id);
 
   return {
     provider: midtrans.provider,
@@ -976,7 +1758,7 @@ export async function handleMidtransFinanceNotification(payload: MidtransFinance
     provider: "midtrans",
     event_id: eventId,
     event_type: String(payload.transaction_status),
-    payload: payload as any,
+    payload: payload as Record<string, unknown>,
   });
 
   const transactionStatus = normalizeMidtransValue(payload.transaction_status);
@@ -1003,7 +1785,7 @@ export async function handleMidtransFinanceNotification(payload: MidtransFinance
 
   const { data: payment, error } = await supabase
     .from("pembayaran")
-    .select("id, tagihan_id, nominal, status")
+    .select("id, tagihan_id, nominal, status, checkout_url, provider_reference")
     .eq("provider", "midtrans")
     .eq("provider_reference", orderId)
     .maybeSingle();
@@ -1013,15 +1795,21 @@ export async function handleMidtransFinanceNotification(payload: MidtransFinance
 
   const isAlreadyVerified = payment.status === "Terverifikasi";
 
+  const verifiedAt = new Date().toISOString();
   const { error: updatePaymentError } = await supabase
     .from("pembayaran")
     .update({
       status: mappedStatus,
-      verified_at: mappedStatus === "Terverifikasi" ? new Date().toISOString() : null,
+      verified_at: mappedStatus === "Terverifikasi" ? verifiedAt : null,
+      bukti_url: mappedStatus === "Terverifikasi" ? payment.checkout_url ?? null : null,
     })
     .eq("id", payment.id);
 
   if (updatePaymentError) throw updatePaymentError;
+
+  if (mappedStatus === "Menunggu" && !isAlreadyVerified) {
+    await syncRegistrasiFromPendingTagihan(payment.tagihan_id);
+  }
 
   if (mappedStatus === "Terverifikasi" && !isAlreadyVerified) {
     const { data: allPmb } = await supabase
@@ -1034,12 +1822,18 @@ export async function handleMidtransFinanceNotification(payload: MidtransFinance
     
     const { data: tagihan } = await supabase
       .from("tagihan")
-      .select("nominal, jenis, mahasiswa:mahasiswa_id(id, nim, users:user_id(full_name))")
+      .select("nominal, jenis, mahasiswa:mahasiswa_id(id, nim, user_id, users:user_id(full_name))")
       .eq("id", payment.tagihan_id)
+      .is("deleted_at", null)
       .single();
 
     if (tagihan && totalPaid >= Number(tagihan.nominal)) {
       await supabase.from("tagihan").update({ status: "Lunas" }).eq("id", payment.tagihan_id);
+      await syncRegistrasiFromPaidTagihan(payment.tagihan_id, {
+        verifiedAt,
+      });
+    } else {
+      await syncRegistrasiFromPendingTagihan(payment.tagihan_id);
     }
 
     const { data: category } = await supabase
@@ -1051,16 +1845,47 @@ export async function handleMidtransFinanceNotification(payload: MidtransFinance
     const mhsData = pickRelation(tagihan?.mahasiswa);
     const userData = pickRelation(mhsData?.users);
 
-    await supabase.from("arus_kas").insert({
-      tanggal: new Date().toISOString().split('T')[0],
-      kategori_id: category?.id ?? null,
-      tipe: "Masuk",
-      judul: `Pembayaran ${tagihan?.jenis || 'Tagihan'} via Gateway`,
-      deskripsi: `Pembayaran dari ${userData?.full_name || 'Mahasiswa'} (${mhsData?.nim || '-'}) via Midtrans`,
-      nominal: payment.nominal,
-      referensi_id: payment.id,
-      created_by: null, 
-    });
+    const { data: existingCashFlow } = await supabase
+      .from("arus_kas")
+      .select("id")
+      .eq("referensi_id", payment.id)
+      .maybeSingle();
+
+    if (!existingCashFlow) {
+      await supabase.from("arus_kas").insert({
+        tanggal: new Date().toISOString().split('T')[0],
+        kategori_id: category?.id ?? null,
+        tipe: "Masuk",
+        judul: `Pembayaran ${tagihan?.jenis || 'Tagihan'} via Gateway`,
+        deskripsi: `Pembayaran dari ${userData?.full_name || 'Mahasiswa'} (${mhsData?.nim || '-'}) via Midtrans`,
+        nominal: payment.nominal,
+        referensi_id: payment.id,
+        created_by: null,
+      });
+    }
+
+    if (mhsData?.user_id) {
+      await enqueueFinanceNotification({
+        userId: mhsData.user_id,
+        event: "payment.success",
+        relatedType: "pembayaran",
+        relatedId: payment.id,
+        href: `/dashboard/keuangan?tab=pembayaran&pembayaran=${payment.id}`,
+        variables: {
+          jenis_tagihan: tagihan?.jenis ?? "Tagihan",
+          nominal: formatCurrencyValue(payment.nominal),
+          tanggal_bayar: formatDateValue(new Date().toISOString()),
+        },
+        idempotencyKey: `finance:gateway-success:${mhsData.user_id}:${payment.id}`,
+      });
+    }
+
+    revalidatePath("/dashboard/keuangan");
+    revalidatePath("/dashboard/registrasi");
+  }
+
+  if ((mappedStatus === "Kadaluarsa" || mappedStatus === "Gagal") && !isAlreadyVerified) {
+    await syncRegistrasiFromRejectedPayment(payment.tagihan_id);
   }
 
   return {

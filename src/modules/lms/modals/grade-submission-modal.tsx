@@ -19,9 +19,21 @@ import { ExternalLink, User } from "lucide-react";
 interface GradeSubmissionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  submission: any;
+  submission: LmsSubmissionForGrade | null;
   maxPoints: number;
 }
+
+type LmsSubmissionForGrade = {
+  id: string;
+  konten_teks?: string | null;
+  file_url?: string | null;
+  nilai?: number | null;
+  umpan_balik?: string | null;
+  mahasiswa?: {
+    nim: string | null;
+    users?: { full_name: string } | null;
+  } | null;
+};
 
 export function GradeSubmissionModal({ isOpen, onClose, submission, maxPoints }: GradeSubmissionModalProps) {
   const [isPending, startTransition] = useTransition();

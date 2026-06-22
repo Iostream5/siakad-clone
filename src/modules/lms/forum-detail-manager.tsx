@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import type { SVGProps } from "react";
 import { 
   ArrowLeft, 
   MessageSquare, 
   Send, 
   User, 
   MoreVertical,
-  Pin,
   Clock
 } from "lucide-react";
 import Link from "next/link";
@@ -19,19 +19,36 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { createLmsForumKomentarAction } from "@/actions/lms";
 import { useToast } from "@/components/ui/toast-provider";
-import { cn } from "@/lib/utils";
 
 interface ForumDetailManagerProps {
-  user: any;
-  topik: any;
-  initialKomentar: any[];
+  user: { role: string };
+  topik: LmsForumTopikDetail;
+  initialKomentar: LmsForumKomentar[];
 }
+
+type LmsForumTopikDetail = {
+  id: string;
+  jadwal_id: string;
+  judul: string;
+  konten: string;
+  is_pinned: boolean;
+  created_at: string;
+  users?: { full_name: string; role: string } | null;
+};
+
+type LmsForumKomentar = {
+  id: string;
+  konten: string;
+  created_at: string;
+  users?: { full_name: string } | null;
+};
 
 export function ForumDetailManager({ user, topik, initialKomentar }: ForumDetailManagerProps) {
   const [isPending, startTransition] = useTransition();
   const { success, error } = useToast();
   const router = useRouter();
   const [newComment, setNewComment] = useState("");
+  const canComment = user.role === "Admin" || user.role === "Dosen" || user.role === "Mahasiswa";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -132,32 +149,34 @@ export function ForumDetailManager({ user, topik, initialKomentar }: ForumDetail
       </div>
 
       {/* Reply Box */}
-      <div className="sticky bottom-8 z-30">
-        <Card className="p-4 border-slate-200 shadow-2xl rounded-3xl bg-white/90 backdrop-blur-md border-t-4 border-t-indigo-500">
-          <form onSubmit={handleSubmit} className="flex gap-3 items-end">
-            <div className="flex-1">
-              <Textarea 
-                placeholder="Tulis tanggapan Anda..." 
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                className="rounded-2xl border-none bg-slate-50 focus:ring-0 font-medium min-h-[60px] resize-none py-3"
-              />
-            </div>
-            <Button 
-              type="submit" 
-              disabled={isPending || !newComment.trim()}
-              className="h-12 w-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-100 transition-all active:scale-90"
-            >
-              {isPending ? <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send className="h-5 w-5" />}
-            </Button>
-          </form>
-        </Card>
-      </div>
+      {canComment && (
+        <div className="sticky bottom-8 z-30">
+          <Card className="p-4 border-slate-200 shadow-2xl rounded-3xl bg-white/90 backdrop-blur-md border-t-4 border-t-indigo-500">
+            <form onSubmit={handleSubmit} className="flex gap-3 items-end">
+              <div className="flex-1">
+                <Textarea
+                  placeholder="Tulis tanggapan Anda..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  className="rounded-2xl border-none bg-slate-50 focus:ring-0 font-medium min-h-[60px] resize-none py-3"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={isPending || !newComment.trim()}
+                className="h-12 w-12 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-100 transition-all active:scale-90"
+              >
+                {isPending ? <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send className="h-5 w-5" />}
+              </Button>
+            </form>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
 
-function UserIcon(props: any) {
+function UserIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

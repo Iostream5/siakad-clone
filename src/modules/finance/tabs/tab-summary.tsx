@@ -2,7 +2,6 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { formatCurrency, cn } from "@/lib/utils";
 import { ArrowUpRight, ArrowDownLeft, Wallet, History, RefreshCw } from "lucide-react";
 
@@ -12,9 +11,10 @@ interface TabSummaryProps {
   pendingPayments: number;
   onSyncStatus: () => void;
   isPending: boolean;
+  canSyncStatus?: boolean;
 }
 
-export default function TabSummary({ summary, totalReceivables, pendingPayments, onSyncStatus, isPending }: TabSummaryProps) {
+export default function TabSummary({ summary, totalReceivables, pendingPayments, onSyncStatus, isPending, canSyncStatus = false }: TabSummaryProps) {
   return (
     <div className="grid gap-4 md:grid-cols-4 animate-in fade-in slide-in-from-top-4 duration-500">
       <Card className="bg-slate-900 text-white border-none shadow-lg rounded-none overflow-hidden relative group md:col-span-2">
@@ -34,14 +34,16 @@ export default function TabSummary({ summary, totalReceivables, pendingPayments,
                 </div>
              </div>
           </div>
-          <Button 
-            onClick={onSyncStatus} 
-            disabled={isPending}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-none font-black text-[9px] uppercase tracking-widest h-10 px-4 shadow-xl"
-          >
-            <RefreshCw className={cn("h-3.5 w-3.5 mr-2", isPending && "animate-spin")} />
-            Sync Status Mhs
-          </Button>
+          {canSyncStatus ? (
+            <Button
+              onClick={onSyncStatus}
+              disabled={isPending}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-none font-black text-[9px] uppercase tracking-widest h-10 px-4 shadow-xl"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5 mr-2", isPending && "animate-spin")} />
+              Sync Status Mhs
+            </Button>
+          ) : null}
         </div>
       </Card>
       

@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { 
   ArrowLeft, 
-  Calendar, 
   Clock, 
   FileText, 
   Send, 
@@ -26,11 +25,31 @@ import { useToast } from "@/components/ui/toast-provider";
 import { cn } from "@/lib/utils";
 
 interface TugasSubmissionManagerProps {
-  user: any;
-  tugas: any;
-  studentProfile: any;
-  initialSubmission: any;
+  user: { role: string };
+  tugas: LmsTugasDetail;
+  studentProfile: { id: string } | null;
+  initialSubmission: LmsSubmission | null;
 }
+
+type LmsTugasDetail = {
+  id: string;
+  jadwal_id: string;
+  judul: string;
+  instruksi?: string | null;
+  deadline: string;
+  poin_max: number;
+  file_url?: string | null;
+  jadwal?: { mata_kuliah?: { nama: string } | null } | null;
+};
+
+type LmsSubmission = {
+  id: string;
+  konten_teks?: string | null;
+  file_url?: string | null;
+  nilai?: number | null;
+  umpan_balik?: string | null;
+  submitted_at: string;
+};
 
 export function TugasSubmissionManager({ 
   user, 
@@ -45,6 +64,10 @@ export function TugasSubmissionManager({
   const isExpired = new Date(tugas.deadline) < new Date();
   const hasSubmitted = !!initialSubmission;
   const isStudent = user.role === "Mahasiswa";
+  const isLateSubmission = hasSubmitted
+    ? new Date(initialSubmission.submitted_at) > new Date(tugas.deadline)
+    : false;
+  const isGraded = initialSubmission?.nilai !== null && initialSubmission?.nilai !== undefined;
 
   async function handleSubmit(formData: FormData) {
     if (!studentProfile) return;
@@ -147,10 +170,9 @@ export function TugasSubmissionManager({
                     <p className="text-xs font-bold uppercase tracking-tight leading-normal">Tugas Belum Dikumpulkan</p>
                   </div>
                   
-                  {isStudent && !isExpired && (
+                  {isStudent && (
                     <form action={handleSubmit} className="space-y-4">
                       <input type="hidden" name="tugasId" value={tugas.id} />
-                      <input type="hidden" name="mahasiswaId" value={studentProfile?.id} />
                       
                       <div className="space-y-2">
                         <Label htmlFor="kontenTeks" className="text-[10px] font-black uppercase tracking-widest text-slate-500">Jawaban / Catatan</Label>
@@ -172,6 +194,12 @@ export function TugasSubmissionManager({
                         />
                       </div>
 
+                      {isExpired && (
+                        <div className="rounded-xl border border-rose-100 bg-rose-50 p-3 text-[10px] font-black uppercase tracking-widest text-rose-600">
+                          Deadline sudah lewat. Pengumpulan akan tercatat terlambat.
+                        </div>
+                      )}
+
                       <Button 
                         type="submit" 
                         disabled={isPending}
@@ -181,41 +209,73 @@ export function TugasSubmissionManager({
                       </Button>
                     </form>
                   )}
-
-                  {isExpired && !hasSubmitted && (
-                    <div className="text-center py-6">
-                      <p className="text-sm font-bold text-rose-500 uppercase tracking-widest">Waktu pengumpulan telah berakhir.</p>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <div className="flex flex-col items-center text-center p-8 rounded-[2rem] bg-emerald-50 border border-emerald-100 text-emerald-700">
-                    <div className="h-16 w-16 bg-emerald-500 text-white rounded-full flex items-center justify-center mb-4 shadow-lg shadow-emerald-200 animate-bounce">
+                  <div className={cn(
+                    "flex flex-col items-center text-center p-8 rounded-[2rem] border",
+                    isLateSubmission ? "bg-rose-50 border-rose-100 text-rose-700" : "bg-emerald-50 border-emerald-100 text-emerald-700"
+                  )}>
+                    <div className={cn(
+                      "h-16 w-16 text-white rounded-full flex items-center justify-center mb-4 shadow-lg",
+                      isLateSubmission ? "bg-rose-500 shadow-rose-200" : "bg-emerald-500 shadow-emerald-200"
+                    )}>
                       <CheckCircle2 className="h-8 w-8" />
                     </div>
-                    <p className="text-sm font-black uppercase tracking-widest">Tugas Berhasil Terkirim</p>
+                    <p className="text-sm font-black uppercase tracking-widest">
+                      {isLateSubmission ? "Tugas Terkirim Terlambat" : "Tugas Berhasil Terkirim"}
+                    </p>
                     <p className="text-[10px] font-bold text-emerald-600/70 mt-1">Dikirim pada {new Date(initialSubmission.submitted_at).toLocaleString('id-ID')}</p>
                   </div>
 
                   <div className="p-6 rounded-2xl bg-white border border-slate-100 space-y-4 shadow-sm">
                     <div>
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Poin Diperoleh</p>
-                      <p className="text-2xl font-black text-slate-900">{initialSubmission.nilai ?? '--'} <span className="text-slate-300 text-sm">/ {tugas.poin_max}</span></p>
+                      <p className="text-2xl font-black text-slate-900">{isGraded ? initialSubmission.nilai : '--'} <span className="text-slate-300 text-sm">/ {tugas.poin_max}</span></p>
                     </div>
                     
                     {initialSubmission.umpan_balik && (
                       <div className="pt-4 border-t border-slate-50">
                         <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-2">Umpan Balik Dosen</p>
-                        <p className="text-xs font-medium text-slate-600 leading-relaxed italic">"{initialSubmission.umpan_balik}"</p>
+                        <p className="text-xs font-medium text-slate-600 leading-relaxed italic">&quot;{initialSubmission.umpan_balik}&quot;</p>
                       </div>
                     )}
                   </div>
 
-                  {isStudent && !isExpired && (
-                    <Button variant="outline" className="w-full border-slate-200 font-bold text-xs h-12 rounded-xl text-slate-500 hover:bg-slate-50">
-                      Edit Pengumpulan
-                    </Button>
+                  {isStudent && (
+                    <form action={handleSubmit} className="space-y-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                      <input type="hidden" name="tugasId" value={tugas.id} />
+                      <div className="space-y-2">
+                        <Label htmlFor="kontenTeksEdit" className="text-[10px] font-black uppercase tracking-widest text-slate-500">Update Jawaban / Catatan</Label>
+                        <Textarea
+                          id="kontenTeksEdit"
+                          name="kontenTeks"
+                          defaultValue={initialSubmission.konten_teks ?? ""}
+                          className="rounded-2xl border-slate-200 focus:border-indigo-500 font-medium min-h-[120px] bg-white shadow-inner"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="fileUrlEdit" className="text-[10px] font-black uppercase tracking-widest text-slate-500">Update Link Tugas</Label>
+                        <Input
+                          id="fileUrlEdit"
+                          name="fileUrl"
+                          defaultValue={initialSubmission.file_url ?? ""}
+                          className="h-12 rounded-xl border-slate-200 focus:border-indigo-500 font-medium bg-white"
+                        />
+                      </div>
+                      {isExpired && (
+                        <div className="rounded-xl border border-rose-100 bg-rose-50 p-3 text-[10px] font-black uppercase tracking-widest text-rose-600">
+                          Deadline sudah lewat. Update terbaru akan tetap tercatat terlambat.
+                        </div>
+                      )}
+                      <Button
+                        type="submit"
+                        disabled={isPending}
+                        className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest text-xs h-12 rounded-xl"
+                      >
+                        {isPending ? "Menyimpan..." : "Update Pengumpulan"}
+                      </Button>
+                    </form>
                   )}
                 </div>
               )}

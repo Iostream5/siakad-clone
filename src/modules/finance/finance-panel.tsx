@@ -2,28 +2,18 @@ import { Card } from "@/components/ui/card";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils";
 
-const financeRows = [
-  {
-    invoice: "INV-2026-0417-01",
-    student: "Nadia Putri",
-    amount: 2250000,
-    status: "Menunggu verifikasi",
-  },
-  {
-    invoice: "INV-2026-0417-02",
-    student: "Rizky Ramadhan",
-    amount: 1750000,
-    status: "Lunas",
-  },
-  {
-    invoice: "INV-2026-0417-03",
-    student: "Aisyah Mufidah",
-    amount: 350000,
-    status: "Dispensasi",
-  },
-];
+type FinancePanelRow = {
+  invoice: string;
+  student: string;
+  amount: number;
+  status: string;
+};
 
-export function FinancePanel() {
+type FinancePanelProps = {
+  rows: FinancePanelRow[];
+};
+
+export function FinancePanel({ rows }: FinancePanelProps) {
   return (
     <Card>
       <p className="text-sm text-slate-500">Keuangan</p>
@@ -40,7 +30,7 @@ export function FinancePanel() {
             </TR>
           </THead>
           <TBody>
-            {financeRows.map((row) => (
+            {rows.map((row) => (
               <TR key={row.invoice}>
                 <TD className="font-medium text-slate-900">{row.invoice}</TD>
                 <TD>{row.student}</TD>
@@ -48,6 +38,13 @@ export function FinancePanel() {
                 <TD>{row.status}</TD>
               </TR>
             ))}
+            {rows.length === 0 ? (
+              <TR>
+                <TD colSpan={4} className="py-8 text-center text-sm font-semibold text-slate-400">
+                  Belum ada data keuangan.
+                </TD>
+              </TR>
+            ) : null}
           </TBody>
         </Table>
       </div>

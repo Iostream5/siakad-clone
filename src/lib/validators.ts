@@ -118,6 +118,7 @@ export const gedungSchema = z.object({
   kode: z.string().trim().min(2, "Kode gedung wajib diisi"),
   nama: z.string().trim().min(3, "Nama gedung wajib diisi"),
   jumlahLantai: z.number().int().min(1),
+  keterangan: z.string().trim().max(300, "Keterangan maksimal 300 karakter").optional().or(z.literal("")),
   isAktif: z.boolean(),
 });
 

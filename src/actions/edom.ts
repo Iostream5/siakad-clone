@@ -42,7 +42,12 @@ export async function createQuestionnaireAction(data: unknown) {
       pertanyaan: q.pertanyaan,
       tipe: q.tipe,
       urutan: q.urutan,
-      is_required: q.is_required
+      is_required: q.is_required,
+      code: `${q.kategori}-${q.urutan}`.replace(/[^a-zA-Z0-9_-]/g, "-").toUpperCase(),
+      category: q.kategori,
+      question_text: q.pertanyaan,
+      sort_order: q.urutan,
+      is_active: true,
     }));
 
     const { error: qstError } = await supabase.from("edom_questions").insert(questionsToInsert);
@@ -56,7 +61,7 @@ export async function createQuestionnaireAction(data: unknown) {
       aksi: "CREATE",
       tableName: "edom_questionnaires",
       recordId: qData.id,
-      newData: { judul, jumlah_pertanyaan: questions.length }
+      newData: { judul, jumlah_pertanyaan: questions.length, actor: user.id }
     });
 
     revalidatePath("/dashboard/edom");
@@ -92,6 +97,47 @@ export async function submitEdomResponseAction(data: unknown) {
       return { error: "Akses ditolak. Profil mahasiswa tidak ditemukan." };
     }
 
+    const { data: questionnaire, error: questionnaireError } = await supabase
+      .from("edom_questionnaires")
+      .select("id, tahun_akademik_id, start_date, end_date, is_active")
+      .eq("id", questionnaire_id)
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (questionnaireError || !questionnaire) {
+      return { error: "Kuesioner EDOM tidak aktif atau tidak ditemukan." };
+    }
+
+    const now = new Date();
+    if (new Date(questionnaire.start_date) > now || new Date(questionnaire.end_date) < now) {
+      return { error: "Periode pengisian EDOM belum dibuka atau sudah ditutup." };
+    }
+
+    const { data: jadwal, error: jadwalError } = await supabase
+      .from("jadwal_kuliah")
+      .select("id, tahun_akademik_id, dosen_id")
+      .eq("id", jadwal_id)
+      .eq("tahun_akademik_id", questionnaire.tahun_akademik_id)
+      .maybeSingle();
+
+    if (jadwalError || !jadwal) {
+      return { error: "Jadwal kelas tidak sesuai periode EDOM." };
+    }
+
+    const { data: approvedKrs } = await supabase
+      .from("krs_detail")
+      .select("id, krs_header!inner(id_mahasiswa, status)")
+      .eq("id_jadwal", jadwal_id)
+      .eq("krs_header.id_mahasiswa", mData.id)
+      .eq("krs_header.status", "Disetujui")
+      .limit(1)
+      .maybeSingle();
+
+    if (!approvedKrs) {
+      return { error: "Anda hanya bisa mengisi EDOM untuk kelas KRS yang sudah disetujui." };
+    }
+
     // Check if already submitted
     const { count } = await supabase
       .from("edom_responses")
@@ -104,11 +150,20 @@ export async function submitEdomResponseAction(data: unknown) {
       return { error: "Anda sudah mengisi evaluasi untuk kelas ini." };
     }
 
+    const ratingAnswers = answers.filter(a => typeof a.nilai_rating === "number");
+    const averageScore = ratingAnswers.length > 0
+      ? ratingAnswers.reduce((sum, answer) => sum + Number(answer.nilai_rating ?? 0), 0) / ratingAnswers.length
+      : 0;
+
     // Insert response
     const { data: rData, error: rError } = await supabase.from("edom_responses").insert({
       questionnaire_id,
+      tahun_akademik_id: questionnaire.tahun_akademik_id,
       mahasiswa_id: mData.id,
       jadwal_id,
+      dosen_id: jadwal.dosen_id,
+      average_score: averageScore,
+      comment: saran || null,
       saran
     }).select("id").single();
 
@@ -121,6 +176,7 @@ export async function submitEdomResponseAction(data: unknown) {
     const answersToInsert = answers.map(a => ({
       response_id: rData.id,
       question_id: a.question_id,
+      score: a.nilai_rating ?? 0,
       nilai_rating: a.nilai_rating,
       jawaban_essay: a.jawaban_essay
     }));

@@ -49,7 +49,7 @@ export async function getDashboardPimpinanStats(tahunAkademikId?: string) {
   }
 
   // Finance Summary (based on tagihan + pembayaran for the active year, or overall if no year)
-  let tagihanQuery = supabase.from("tagihan").select("nominal, status");
+  let tagihanQuery = supabase.from("tagihan").select("nominal, status").is("deleted_at", null);
   if (effectiveYearId) {
     tagihanQuery = tagihanQuery.eq("tahun_akademik_id", effectiveYearId);
   }
@@ -64,13 +64,18 @@ export async function getDashboardPimpinanStats(tahunAkademikId?: string) {
     tagihanLunas = tagihanData.filter(t => t.status === "Lunas").length;
   }
 
-  let pembayaranQuery: any = supabase.from("pembayaran").select("nominal").eq("status", "Terverifikasi");
+  let pembayaranQuery: any = supabase
+    .from("pembayaran")
+    .select("nominal, tagihan!inner(id)")
+    .eq("status", "Terverifikasi")
+    .is("tagihan.deleted_at", null);
   // Filter by tagihan's year if needed via inner join
   if (effectiveYearId) {
     pembayaranQuery = supabase
       .from("pembayaran")
       .select("nominal, tagihan!inner(tahun_akademik_id)")
       .eq("status", "Terverifikasi")
+      .is("tagihan.deleted_at", null)
       .eq("tagihan.tahun_akademik_id", effectiveYearId);
   }
 
@@ -186,7 +191,7 @@ export async function getLaporanKeuangan(filters: { tahunAkademikId?: string, je
       users!mahasiswa_user_id_fkey(full_name),
       program_studi!mahasiswa_prodi_id_fkey(nama)
     )
-  `);
+  `).is("deleted_at", null);
 
   if (filters.tahunAkademikId && filters.tahunAkademikId !== "all") {
     query = query.eq("tahun_akademik_id", filters.tahunAkademikId);

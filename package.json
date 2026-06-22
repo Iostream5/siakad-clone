@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "db:migrate": "supabase migration up",
     "db:seed": "node -e \"console.log('Seed Supabase dijalankan lewat npm run db:reset untuk lokal, atau supabase db push --include-seed saat deploy remote secara sengaja.')\"",
+    "seed:dev-finance": "node scripts/seed-dev-finance.mjs",
     "db:reset": "supabase db reset",
     "migrate": "npm run db:migrate",
     "seed": "npm run db:seed",

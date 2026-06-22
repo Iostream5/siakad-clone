@@ -8,9 +8,9 @@ import { createAdminClient } from "@/supabase/admin";
 export default async function EdomPage() {
   const user = await requireAuthorizedUser("edom");
 
-  let questionnaires: any[] = [];
-  let eligibleClasses: any[] = [];
-  let results: any[] = [];
+  let questionnaires: Awaited<ReturnType<typeof getActiveQuestionnaires>> = [];
+  let eligibleClasses: Awaited<ReturnType<typeof getStudentEdomEligibility>> = [];
+  let results: Awaited<ReturnType<typeof getEdomResults>> = [];
 
   if (user.role === "Admin" || user.role === "Prodi") {
      questionnaires = await getActiveQuestionnaires();

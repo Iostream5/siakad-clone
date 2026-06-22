@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode, SVGProps } from "react";
 import { 
   FileText, 
   Layout, 
@@ -8,12 +9,9 @@ import {
   Users, 
   ArrowLeft,
   Calendar,
-  Clock,
   MapPin,
   Download,
   Plus,
-  Send,
-  MoreVertical,
   Paperclip,
   GraduationCap
 } from "lucide-react";
@@ -27,28 +25,73 @@ import { cn } from "@/lib/utils";
 import { AddMateriModal } from "./modals/add-materi-modal";
 import { AddTugasModal } from "./modals/add-tugas-modal";
 import { AddForumModal } from "./modals/add-forum-modal";
+import type { LmsParticipant } from "@/lib/admin/lms";
 
 interface ClassroomManagerProps {
-  user: any;
-  jadwal: any;
-  initialMateri: any[];
-  initialTugas: any[];
-  initialForum: any[];
+  user: { role: string };
+  jadwal: LmsJadwal;
+  initialMateri: LmsMateri[];
+  initialTugas: LmsTugas[];
+  initialForum: LmsForumTopik[];
+  participants: LmsParticipant[];
+  canManage: boolean;
 }
+
+type LmsJadwal = {
+  id: string;
+  nama_kelas: string;
+  hari: string;
+  jam_mulai: string;
+  jam_selesai: string;
+  ruangan: string;
+  mata_kuliah: { nama: string; kode: string; sks: number } | null;
+  dosen: { users: { full_name: string } | null } | null;
+};
+
+type LmsMateri = {
+  id: string;
+  judul: string;
+  deskripsi?: string | null;
+  file_url?: string | null;
+  file_type?: string | null;
+  is_visible: boolean;
+  created_at: string;
+};
+
+type LmsTugas = {
+  id: string;
+  judul: string;
+  instruksi?: string | null;
+  deadline: string;
+  poin_max: number;
+};
+
+type LmsForumTopik = {
+  id: string;
+  judul: string;
+  konten: string;
+  is_pinned: boolean;
+  created_at: string;
+  users?: { full_name: string; role: string } | null;
+  lms_forum_komentar?: Array<{ count: number }>;
+};
 
 export function ClassroomManager({ 
   user, 
   jadwal, 
   initialMateri, 
   initialTugas, 
-  initialForum 
+  initialForum,
+  participants,
+  canManage,
 }: ClassroomManagerProps) {
   const [activeTab, setActiveTab] = useState("materi");
   const [isMateriModalOpen, setIsMateriModalOpen] = useState(false);
   const [isTugasModalOpen, setIsTugasModalOpen] = useState(false);
   const [isForumModalOpen, setIsForumModalOpen] = useState(false);
   
-  const isLecturer = user.role === "Dosen" || user.role === "Admin";
+  const canCreateForum = user.role === "Admin" || user.role === "Dosen" || user.role === "Mahasiswa";
+  const showAddButton = activeTab === "forum" ? canCreateForum : canManage;
 
   function handleAddClick() {
     if (activeTab === "materi") {
@@ -113,7 +156,7 @@ export function ClassroomManager({
             <TabTrigger value="peserta" icon={<Users className="h-4 w-4" />} label="Peserta Kelas" />
           </TabsList>
           
-          {(isLecturer || activeTab === "forum") && (
+          {showAddButton && (
             <div className="px-2">
               <Button 
                 onClick={handleAddClick}
@@ -163,7 +206,27 @@ export function ClassroomManager({
           </TabsContent>
 
           <TabsContent value="peserta" className="animate-in slide-in-from-bottom-4 duration-500">
-            <EmptyState icon={<Users />} message="Fitur manajemen peserta kelas sedang dikembangkan." />
+            {participants.length === 0 ? (
+              <EmptyState icon={<Users />} message="Belum ada peserta dari KRS yang disetujui." />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {participants.map((participant) => (
+                  <Card key={participant.id} className="p-5 border-slate-200 shadow-sm rounded-2xl">
+                    <div className="flex items-center gap-4">
+                      <div className="h-11 w-11 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100">
+                        <User className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{participant.full_name}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                          {participant.nim ?? "NIM belum ada"} {participant.prodi_name ? `- ${participant.prodi_name}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
         </div>
       </Tabs>
@@ -184,13 +247,14 @@ export function ClassroomManager({
         isOpen={isForumModalOpen} 
         onClose={() => setIsForumModalOpen(false)} 
         jadwalId={jadwal.id} 
+        canPin={canManage}
       />
     </div>
   );
 }
 
 // Helper Components
-function InfoItem({ icon, label, value }: { icon: any, label: string, value: string }) {
+function InfoItem({ icon, label, value }: { icon: ReactNode, label: string, value: string | undefined }) {
   return (
     <div className="flex items-center gap-3">
       <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
@@ -204,7 +268,7 @@ function InfoItem({ icon, label, value }: { icon: any, label: string, value: str
   );
 }
 
-function TabTrigger({ value, icon, label }: { value: string, icon: any, label: string }) {
+function TabTrigger({ value, icon, label }: { value: string, icon: ReactNode, label: string }) {
   return (
     <TabsTrigger 
       value={value} 
@@ -215,7 +279,7 @@ function TabTrigger({ value, icon, label }: { value: string, icon: any, label: s
   );
 }
 
-function MateriCard({ item }: { item: any }) {
+function MateriCard({ item }: { item: LmsMateri }) {
   return (
     <Card className="p-5 border-slate-200 shadow-sm hover:border-emerald-200 transition-all rounded-2xl group">
       <div className="flex items-center justify-between gap-4">
@@ -228,6 +292,9 @@ function MateriCard({ item }: { item: any }) {
             <div className="flex items-center gap-3 mt-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Diunggah pada {new Date(item.created_at).toLocaleDateString('id-ID')}</span>
               <Badge variant="outline" className="text-[9px] font-black uppercase h-5 px-1.5 border-slate-200 text-slate-400">{item.file_type || 'PDF'}</Badge>
+              {!item.is_visible && (
+                <Badge className="text-[9px] font-black uppercase h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-100">Hidden</Badge>
+              )}
             </div>
           </div>
         </div>
@@ -241,7 +308,7 @@ function MateriCard({ item }: { item: any }) {
   );
 }
 
-function TugasCard({ item, jadwalId }: { item: any, jadwalId: string }) {
+function TugasCard({ item, jadwalId }: { item: LmsTugas, jadwalId: string }) {
   const isExpired = new Date(item.deadline) < new Date();
   
   return (
@@ -279,7 +346,7 @@ function TugasCard({ item, jadwalId }: { item: any, jadwalId: string }) {
   );
 }
 
-function ForumCard({ item, jadwalId }: { item: any, jadwalId: string }) {
+function ForumCard({ item, jadwalId }: { item: LmsForumTopik, jadwalId: string }) {
   return (
     <Link href={`/dashboard/akademik/lms/${jadwalId}/forum/${item.id}`}>
       <Card className="p-6 border-slate-200 shadow-sm hover:border-indigo-200 transition-all rounded-2xl group cursor-pointer">
@@ -313,7 +380,7 @@ function ForumCard({ item, jadwalId }: { item: any, jadwalId: string }) {
   );
 }
 
-function EmptyState({ icon, message }: { icon: any, message: string }) {
+function EmptyState({ icon, message }: { icon: ReactNode, message: string }) {
   return (
     <div className="p-20 flex flex-col items-center justify-center text-center border-dashed border-2 border-slate-200 bg-white/50 rounded-[2rem] animate-in fade-in duration-1000">
       <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 mb-6 border border-slate-100">
@@ -324,7 +391,7 @@ function EmptyState({ icon, message }: { icon: any, message: string }) {
   );
 }
 
-function User(props: any) {
+function User(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

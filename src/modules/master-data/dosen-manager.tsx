@@ -6,7 +6,7 @@ import { useFormStatus } from "react-dom";
 import { Download, Pencil, Plus, Search, Trash2, X, UserCheck } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { deleteDosenAction, upsertDosenAction } from "@/actions/dosen";
+import { deleteDosenAction, type DosenActionState, upsertDosenAction } from "@/actions/dosen";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import type { DosenRow } from "@/lib/admin/dosen";
 import { useActionToast } from "@/lib/use-action-toast";
 
-const initialState = {
+const initialState: DosenActionState = {
   success: false,
   message: null,
 };
@@ -89,7 +89,7 @@ function DosenFormModal({
   prodiList: { id: string; nama: string }[];
 }) {
   const router = useRouter();
-  const [state, formAction] = useActionState(upsertDosenAction as any, initialState);
+  const [state, formAction] = useActionState(upsertDosenAction, initialState);
   useActionToast(state, item ? "Data dosen diperbarui" : "Dosen berhasil ditambahkan");
 
   useEffect(() => {
@@ -185,7 +185,7 @@ function DosenFormModal({
 
 function DeleteDosenModal({ open, onClose, item }: { open: boolean, onClose: () => void, item: DosenRow | null }) {
   const router = useRouter();
-  const [state, formAction] = useActionState(deleteDosenAction as any, initialState);
+  const [state, formAction] = useActionState(deleteDosenAction, initialState);
   useActionToast(state, "Dosen berhasil dihapus");
 
   useEffect(() => {

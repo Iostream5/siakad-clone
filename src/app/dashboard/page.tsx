@@ -1,4 +1,5 @@
 import { DashboardOverview } from "@/modules/dashboard/overview";
+import { CalonMahasiswaDashboard } from "@/modules/dashboard/calon-mahasiswa-dashboard";
 import { PimpinanOverview } from "@/modules/dashboard/pimpinan-overview";
 import { MahasiswaDashboard } from "@/modules/dashboard/mahasiswa-dashboard";
 import { DosenDashboard } from "@/modules/dashboard/dosen-dashboard";
@@ -7,6 +8,9 @@ import { ProdiDashboard } from "@/modules/dashboard/prodi-dashboard";
 import { RecentActivityFeed } from "@/modules/dashboard/recent-activity";
 import { requireAuthorizedUser } from "@/lib/auth";
 import { getActiveAnnouncements } from "@/lib/admin/announcements";
+import { getNotificationPreview } from "@/lib/admin/notifications";
+import { getPmbPaymentPortal } from "@/lib/admin/pmb";
+import { getMahasiswaPostNimFlow } from "@/lib/admin/mahasiswa-post-nim-flow";
 import { getMasterDataSnapshot } from "@/lib/admin/master-data";
 import { getDashboardPimpinanStats } from "@/lib/admin/reports";
 import { Suspense } from "react";
@@ -40,18 +44,33 @@ export default async function DashboardPage() {
     );
   }
 
+  if (user.role === "Calon Mahasiswa") {
+    const [portal, notifications] = await Promise.all([
+      getPmbPaymentPortal(user.id),
+      getNotificationPreview(user.id),
+    ]);
+
+    return (
+      <div className="space-y-6">
+        <CalonMahasiswaDashboard user={user} portal={portal} notifications={notifications} />
+      </div>
+    );
+  }
+
+  if (user.role === "Mahasiswa") {
+    const flow = await withTimeout(getMahasiswaPostNimFlow(user.id), DASHBOARD_DATA_TIMEOUT_MS + 2500);
+
+    return (
+      <div className="space-y-6">
+        <MahasiswaDashboard user={user} flow={flow} />
+      </div>
+    );
+  }
+
   const [announcements, snapshot] = await Promise.all([
     withTimeout(getActiveAnnouncements(user.role), DASHBOARD_DATA_TIMEOUT_MS),
     withTimeout(getMasterDataSnapshot(), DASHBOARD_DATA_TIMEOUT_MS),
   ]);
-
-  if (user.role === "Mahasiswa") {
-    return (
-      <div className="space-y-6">
-        <MahasiswaDashboard user={user} stats={snapshot?.counts} />
-      </div>
-    );
-  }
 
   if (user.role === "Dosen") {
     return (

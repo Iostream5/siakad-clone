@@ -137,6 +137,8 @@ export const sidebarItems: SidebarItem[] = [
       { key: "keuangan.setup", href: "/dashboard/keuangan?tab=setup", label: "Setup Keuangan", roles: ["Admin", "Keuangan"] },
       { key: "keuangan.pmb", href: "/dashboard/keuangan?tab=pmb", label: "Pembayaran PMB", roles: ["Calon Mahasiswa", "Mahasiswa"] },
       { key: "keuangan.overview", href: "/dashboard/keuangan?tab=summary", label: "Dashboard" },
+      { key: "keuangan.tagihan", href: "/dashboard/keuangan?tab=tagihan", label: "Daftar Tagihan", roles: ["Mahasiswa"] },
+      { key: "keuangan.pembayaran", href: "/dashboard/keuangan?tab=pembayaran", label: "Riwayat Pembayaran", roles: ["Mahasiswa"] },
       {
         key: "keuangan.transaksi",
         href: "/dashboard/keuangan?tab=transaksi",

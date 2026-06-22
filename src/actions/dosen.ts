@@ -1,14 +1,26 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 import { deleteDosen, upsertDosen } from "@/lib/admin/dosen";
 import { requireAuthorizedUser } from "@/lib/auth";
-import { withToastParams } from "@/lib/toast-query";
 import { dosenSchema } from "@/lib/validators";
 
-export async function upsertDosenAction(formData: FormData) {
+export type DosenActionState = {
+  success: boolean;
+  message: string | null;
+};
+
+const initialState: DosenActionState = {
+  success: false,
+  message: null,
+};
+
+export async function upsertDosenAction(
+  previousState: DosenActionState = initialState,
+  formData: FormData,
+): Promise<DosenActionState> {
+  void previousState;
   await requireAuthorizedUser("master-data.dosen", ["Admin", "Prodi", "Staff"]);
 
   const id = formData.get("id")?.toString();
@@ -25,69 +37,56 @@ export async function upsertDosenAction(formData: FormData) {
   const validated = dosenSchema.safeParse(rawData);
 
   if (!validated.success) {
-    redirect(
-      withToastParams("/dashboard/master-data/dosen", {
-        variant: "error",
-        title: "Data dosen tidak valid",
-        message: validated.error.issues[0]?.message,
-      }),
-    );
+    return {
+      success: false,
+      message: validated.error.issues[0]?.message ?? "Data dosen tidak valid.",
+    };
   }
 
   try {
     await upsertDosen({ ...validated.data, id });
   } catch (error) {
-    redirect(
-      withToastParams("/dashboard/master-data/dosen", {
-        variant: "error",
-        title: "Gagal menyimpan dosen",
-        message: error instanceof Error ? error.message : "Terjadi kesalahan internal",
-      }),
-    );
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Terjadi kesalahan internal",
+    };
   }
 
   revalidatePath("/dashboard/master-data/dosen");
-  redirect(
-    withToastParams("/dashboard/master-data/dosen", {
-      variant: "success",
-      title: "Berhasil",
-      message: `Data dosen berhasil ${id ? "diperbarui" : "ditambahkan"}.`,
-    }),
-  );
+  return {
+    success: true,
+    message: `Data dosen berhasil ${id ? "diperbarui" : "ditambahkan"}.`,
+  };
 }
 
-export async function deleteDosenAction(formData: FormData) {
+export async function deleteDosenAction(
+  previousState: DosenActionState = initialState,
+  formData: FormData,
+): Promise<DosenActionState> {
+  void previousState;
   await requireAuthorizedUser("master-data.dosen", ["Admin", "Prodi", "Staff"]);
 
   const id = formData.get("id")?.toString();
 
   if (!id) {
-    redirect(
-      withToastParams("/dashboard/master-data/dosen", {
-        variant: "error",
-        title: "ID dosen tidak valid",
-      }),
-    );
+    return {
+      success: false,
+      message: "ID dosen tidak valid.",
+    };
   }
 
   try {
     await deleteDosen(id);
   } catch (error) {
-    redirect(
-      withToastParams("/dashboard/master-data/dosen", {
-        variant: "error",
-        title: "Gagal menghapus dosen",
-        message: error instanceof Error ? error.message : "Terjadi kesalahan internal",
-      }),
-    );
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Terjadi kesalahan internal",
+    };
   }
 
   revalidatePath("/dashboard/master-data/dosen");
-  redirect(
-    withToastParams("/dashboard/master-data/dosen", {
-      variant: "success",
-      title: "Berhasil",
-      message: "Data dosen berhasil dihapus.",
-    }),
-  );
+  return {
+    success: true,
+    message: "Data dosen berhasil dihapus.",
+  };
 }

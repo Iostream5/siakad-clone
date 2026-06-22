@@ -1,36 +1,57 @@
 "use client";
 
 import { useState } from "react";
+import type { SVGProps } from "react";
 import Link from "next/link";
 import { 
   BookOpen, 
   Calendar, 
   Clock, 
-  GraduationCap, 
   Layout, 
   Search, 
   User,
   ArrowRight,
   MoreVertical,
   FileText,
-  MessageSquare,
-  CheckCircle2,
-  Settings
+  MessageSquare
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
 interface LmsDashboardProps {
   role: string;
-  initialClasses: any[];
+  initialClasses: LmsDashboardClass[];
   stats?: { totalMateri: number, totalTugas: number, totalForum: number } | null;
 }
 
+type LmsDashboardClass = {
+  id: string;
+  nama_kelas: string;
+  hari: string;
+  jam_mulai: string;
+  jam_selesai: string;
+  ruangan: string;
+  peserta?: number;
+  mata_kuliah?: { nama: string; kode: string; sks: number } | null;
+  dosen?: { users?: { full_name: string } | null } | null;
+  materi?: Array<{ count: number }>;
+  tugas?: Array<{ count: number }>;
+  forum?: Array<{ count: number }>;
+};
+
 export function LmsDashboard({ role, initialClasses, stats }: LmsDashboardProps) {
   const [search, setSearch] = useState("");
+  const computedStats = initialClasses.reduce(
+    (acc, item) => ({
+      totalMateri: acc.totalMateri + (item.materi?.[0]?.count || 0),
+      totalTugas: acc.totalTugas + (item.tugas?.[0]?.count || 0),
+      totalForum: acc.totalForum + (item.forum?.[0]?.count || 0),
+    }),
+    { totalMateri: 0, totalTugas: 0, totalForum: 0 },
+  );
+  const visibleStats = stats ?? computedStats;
 
   const filteredClasses = initialClasses.filter((c) => 
     c.mata_kuliah?.nama?.toLowerCase().includes(search.toLowerCase()) ||
@@ -193,28 +214,28 @@ export function LmsDashboard({ role, initialClasses, stats }: LmsDashboardProps)
       ) : (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <StatCard
+              icon={<BookOpen className="h-5 w-5 text-emerald-600" />}
+              label="Kelas KRS"
+              value={`${initialClasses.length} Kelas`}
+              bg="bg-emerald-50"
+            />
+            <StatCard
               icon={<FileText className="h-5 w-5 text-blue-600" />}
-              label="Materi Terbaru"
-              value="12 File"
+              label="Materi Tersedia"
+              value={`${visibleStats.totalMateri} File`}
               bg="bg-blue-50"
             />
             <StatCard
-              icon={<MessageSquare className="h-5 w-5 text-purple-600" />}
-              label="Diskusi Aktif"
-              value="5 Topik"
-              bg="bg-purple-50"
-            />
-            <StatCard
               icon={<Layout className="h-5 w-5 text-amber-600" />}
-              label="Tugas Mendatang"
-              value="3 Tugas"
+              label="Tugas"
+              value={`${visibleStats.totalTugas} Tugas`}
               bg="bg-amber-50"
             />
             <StatCard
-              icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}
-              label="Kehadiran"
-              value="95%"
-              bg="bg-emerald-50"
+              icon={<MessageSquare className="h-5 w-5 text-purple-600" />}
+              label="Diskusi"
+              value={`${visibleStats.totalForum} Topik`}
+              bg="bg-purple-50"
             />
           </div>
       )}
@@ -236,7 +257,7 @@ function StatCard({ icon, label, value, bg }: { icon: React.ReactNode, label: st
   );
 }
 
-function SchoolIcon(props: any) {
+function SchoolIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

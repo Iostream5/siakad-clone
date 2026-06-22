@@ -126,6 +126,45 @@ function filterSidebarTreeByAccess(items: MenuTreeItem[], allowedKeys: Set<strin
   });
 }
 
+const mahasiswaMenuOrder = new Map([
+  ["dashboard", 0],
+  ["keuangan", 1],
+  ["registrasi", 2],
+  ["krs", 3],
+  ["akademik.lms", 4],
+  ["nilai", 5],
+]);
+
+const mahasiswaKeuanganChildOrder = new Map([
+  ["keuangan.overview", 0],
+  ["keuangan.tagihan", 1],
+  ["keuangan.pembayaran", 2],
+  ["keuangan.pmb", 3],
+]);
+
+function sortSidebarItemsForRole(items: MenuTreeItem[], role: UserRole): MenuTreeItem[] {
+  if (role !== "Mahasiswa") return items;
+
+  return [...items]
+    .sort((left, right) => {
+      const leftOrder = mahasiswaMenuOrder.get(left.key) ?? 100;
+      const rightOrder = mahasiswaMenuOrder.get(right.key) ?? 100;
+      return leftOrder - rightOrder || left.label.localeCompare(right.label);
+    })
+    .map((item) => {
+      if (item.key !== "keuangan" || !item.children?.length) return item;
+
+      return {
+        ...item,
+        children: [...item.children].sort((left, right) => {
+          const leftOrder = mahasiswaKeuanganChildOrder.get(left.key) ?? 100;
+          const rightOrder = mahasiswaKeuanganChildOrder.get(right.key) ?? 100;
+          return leftOrder - rightOrder || left.label.localeCompare(right.label);
+        }),
+      };
+    });
+}
+
 function getDefaultMenuKeysFromRows(rows: MenuRow[], role: UserRole) {
   return new Set(
     rows
@@ -220,7 +259,10 @@ export async function getRoleAccessContext(role: UserRole): Promise<RoleAccessCo
   return {
     resolvedRole: role,
     allowedMenuKeys,
-    sidebarItems: filterSidebarTreeByAccess(buildSidebarTree(menuRows), new Set(allowedMenuKeys)) as SidebarItem[],
+    sidebarItems: sortSidebarItemsForRole(
+      filterSidebarTreeByAccess(buildSidebarTree(menuRows), new Set(allowedMenuKeys)),
+      role,
+    ) as SidebarItem[],
     roleOverrides: permissionResult.data,
   };
 }
@@ -249,7 +291,10 @@ export async function getUserAccessContext(userId: string, fallbackRole: UserRol
 
   return {
     ...accessContext,
-    sidebarItems: filterSidebarTreeByAccess(buildSidebarTree(menuRows), new Set(accessContext.allowedMenuKeys)) as SidebarItem[],
+    sidebarItems: sortSidebarItemsForRole(
+      filterSidebarTreeByAccess(buildSidebarTree(menuRows), new Set(accessContext.allowedMenuKeys)),
+      accessContext.resolvedRole,
+    ) as SidebarItem[],
   };
 }
 

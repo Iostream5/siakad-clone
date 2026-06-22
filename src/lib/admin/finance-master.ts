@@ -8,6 +8,6 @@ export async function getMasterBiayaList() {
     *,
     program_studi:prodi_id(nama),
     tahun_akademik:tahun_akademik_id(nama)
-  `).order("created_at", { ascending: false });
+  `).is("deleted_at", null).order("created_at", { ascending: false });
   return data || [];
 }

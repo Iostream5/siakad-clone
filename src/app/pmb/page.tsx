@@ -57,7 +57,7 @@ export default function PublicPmbPage() {
               </Link>
               <Link href="/login">
                 <Button variant="secondary" size="lg" className="rounded-xl">
-                  Login panitia / mahasiswa
+                  Login calon mahasiswa / panitia
                 </Button>
               </Link>
             </div>
@@ -94,7 +94,7 @@ export default function PublicPmbPage() {
             <div className="mt-6 rounded-[1.25rem] border border-emerald-300/20 bg-emerald-400/8 p-4">
               <div className="flex items-center gap-3">
                 <Clock3 className="h-4 w-4 text-emerald-200" />
-                <p className="text-[0.92rem] text-emerald-100">Isi formulir sekali, panitia lanjutkan proses dari dashboard PMB.</p>
+                <p className="text-[0.92rem] text-emerald-100">Isi formulir sekali, lalu login untuk memantau tahapan PMB di dashboard calon mahasiswa.</p>
               </div>
             </div>
           </Card>

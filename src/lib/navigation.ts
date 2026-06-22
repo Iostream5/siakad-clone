@@ -3,7 +3,7 @@ import type { UserRole } from "@/types/domain";
 export function getDefaultRolePath(role: UserRole) {
   switch (role) {
     case "Calon Mahasiswa":
-      return "/dashboard/keuangan?tab=pmb";
+      return "/dashboard";
     case "Mahasiswa":
       return "/dashboard/keuangan";
     case "Dosen":

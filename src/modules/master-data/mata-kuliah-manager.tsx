@@ -125,6 +125,8 @@ function MataKuliahFormModal({
       description="Lengkapi informasi kurikulum mata kuliah"
     >
       <form action={formAction} className="space-y-5">
+        <input type="hidden" name="id" value={item?.id ?? ""} />
+
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="sm:col-span-1">
             <label className="mb-2 block text-sm font-medium text-slate-800">Kode MK</label>
@@ -222,6 +224,8 @@ function DeleteMataKuliahModal({
   return (
     <ModalShell open={open} onClose={onClose} title="Hapus Mata Kuliah" description="Konfirmasi penghapusan data mata kuliah">
       <form action={formAction} className="space-y-5">
+        <input type="hidden" name="id" value={item.id} />
+
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
           <p className="text-sm text-rose-900">Hapus mata kuliah berikut?</p>
           <h4 className="mt-2 text-lg font-semibold text-slate-950">{item.nama}</h4>

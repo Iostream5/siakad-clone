@@ -1,11 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Zap, AlertCircle } from "lucide-react";
+import { AlertCircle, Trash2, Zap } from "lucide-react";
 
-import { verifyPaymentAction, syncAllStudentsStatusAction, getStudentLedgerAction } from "@/actions/finance";
+import {
+  bulkSoftDeleteTagihanAction,
+  getStudentLedgerAction,
+  sendOverdueTagihanNotificationsAction,
+  sendTagihanNotificationAction,
+  syncAllStudentsStatusAction,
+  verifyPaymentAction,
+} from "@/actions/finance";
 import { deleteMasterBiayaAction, generateBulkTagihanAction } from "@/actions/finance-master";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,33 +23,45 @@ import type { StudentLedgerData } from "@/lib/admin/finance";
 import type { MahasiswaRow } from "@/lib/admin/mahasiswa";
 import type { PmbPortalData } from "./tabs/tab-pmb-payment";
 
-// Lazy Loaded Tabs
 const TabSummary = dynamic(() => import("./tabs/tab-summary"));
 const TabTagihan = dynamic(() => import("./tabs/tab-tagihan"));
 const TabPembayaran = dynamic(() => import("./tabs/tab-pembayaran"));
+const TabStudentSummary = dynamic(() => import("./tabs/tab-student-summary"));
+const TabStudentTagihan = dynamic(() => import("./tabs/tab-student-tagihan"));
+const TabStudentPembayaran = dynamic(() => import("./tabs/tab-student-pembayaran"));
 const TabSetup = dynamic(() => import("./tabs/tab-setup"));
 const TabPmbPayment = dynamic(() => import("./tabs/tab-pmb-payment"));
+const TabCashflow = dynamic(() => import("./tabs/tab-cashflow"));
+const TabLaporan = dynamic(() => import("./tabs/tab-laporan"));
 
-// Lazy Loaded Modals
 const LedgerModal = dynamic(() => import("./modals/ledger-modal"));
+const AddTagihanModal = dynamic(() => import("./modals/add-tagihan-modal"));
+const AddMasterBiayaModal = dynamic(() => import("./modals/add-master-biaya-modal"));
+const ImportTagihanModal = dynamic(() => import("./modals/import-tagihan-modal"));
+const EditTagihanModal = dynamic(() => import("./modals/edit-tagihan-modal"));
 
 type FinanceManagerProps = {
   tagihan: FinanceBillListItem[];
   pembayaran: FinancePaymentListItem[];
-  cashFlow: unknown[];
+  pmbPembayaran: FinancePmbPaymentItem[];
+  cashFlow: FinanceCashFlowItem[];
   summary: { balance: number; income: number; expense: number };
-  categories: unknown[];
+  categories: FinanceCategoryItem[];
   mahasiswaList: MahasiswaRow[];
   tahunAkademikList: FinanceAcademicYearOption[];
-  masterBiayaList: unknown[];
-  prodiList: unknown[];
+  masterBiayaList: FinanceMasterBiayaItem[];
+  prodiList: FinanceStudyProgramOption[];
   pmbPaymentPortal: PmbPortalData | null;
+  laporanKeuangan: FinanceReportItem[];
+  setupData: FinanceSetupData;
   userRole: string;
+  studentLedger?: StudentLedgerData | null;
 };
 
 type FinanceBillListItem = {
   id: string;
   mahasiswa_id: string;
+  tahun_akademik_id?: string;
   jenis: string;
   nominal: number | string;
   jatuh_tempo: string;
@@ -74,40 +94,154 @@ type FinancePaymentListItem = {
   } | null;
 };
 
+type FinancePmbPaymentItem = {
+  id: string;
+  tanggal_bayar: string;
+  nominal: number | string;
+  metode: string;
+  bukti_url?: string | null;
+  status: string;
+  pmb_pendaftaran?: {
+    nomor_pendaftaran?: string | null;
+    nama_lengkap?: string | null;
+    email?: string | null;
+    program_studi?: {
+      nama?: string | null;
+    } | null;
+  } | null;
+};
+
+type FinanceCashFlowItem = {
+  id: string;
+  tanggal: string;
+  tipe: string;
+  judul: string;
+  deskripsi?: string | null;
+  nominal: number | string;
+  kategori?: {
+    nama?: string | null;
+    tipe?: string | null;
+  } | null;
+};
+
+type FinanceCategoryItem = {
+  id: string;
+  nama: string;
+  tipe: string;
+};
+
 type FinanceAcademicYearOption = {
+  id: string;
+  kode?: string | null;
+  nama: string;
+  semester?: string | null;
+  is_aktif?: boolean | null;
+};
+
+type FinanceStudyProgramOption = {
   id: string;
   nama: string;
 };
 
-export function FinanceManager({ 
-  tagihan, 
-  pembayaran, 
+type FinanceMasterBiayaItem = {
+  id: string;
+  nama: string;
+  nominal: number | string;
+  angkatan?: number | null;
+  tingkat_kelas?: string[] | null;
+  jurusan?: string[] | null;
+  gelombang?: string | null;
+  jalur?: string | null;
+  status?: boolean | null;
+  program_studi?: {
+    nama?: string | null;
+  } | null;
+  tahun_akademik?: {
+    nama?: string | null;
+  } | null;
+};
+
+type FinanceReportItem = {
+  id: string;
+  jenis: string;
+  nominal: number;
+  terbayar: number;
+  tunggakan: number;
+  status: string;
+  jatuhTempo: string;
+  mahasiswaNama: string;
+  mahasiswaNim: string;
+  prodi: string;
+};
+
+type FinanceSetupData = {
+  coa: Record<string, unknown>[];
+  bankAccounts: Record<string, unknown>[];
+  bankIntegrations: Record<string, unknown>[];
+  paymentMethods: Record<string, unknown>[];
+  scholarships: Record<string, unknown>[];
+  categories: Record<string, unknown>[];
+};
+
+export function FinanceManager({
+  tagihan,
+  pembayaran,
+  pmbPembayaran,
+  cashFlow,
   summary,
-  mahasiswaList, 
+  categories,
+  mahasiswaList,
   tahunAkademikList,
   masterBiayaList,
   prodiList,
   pmbPaymentPortal,
-  userRole
+  laporanKeuangan,
+  setupData,
+  userRole,
+  studentLedger = null,
 }: FinanceManagerProps) {
   const isBendahara = userRole === "Bendahara";
+  const isStudent = userRole === "Mahasiswa";
   const isPmbPayer = userRole === "Calon Mahasiswa";
+  const isPimpinan = userRole === "Pimpinan";
+  const canManageFinance = userRole === "Admin" || userRole === "Keuangan";
+  const canMutateFinance = canManageFinance || isBendahara;
   const searchParams = useSearchParams();
   const { success, error } = useToast();
   const [isPending, startTransition] = useTransition();
 
-  let activeTab = searchParams.get("tab") || (isPmbPayer ? "pmb" : isBendahara ? "tagihan" : "summary");
+  const defaultTab = isPmbPayer ? "pmb" : (isBendahara || isStudent) ? "tagihan" : "summary";
+  let activeTab = searchParams.get("tab") || defaultTab;
   if (activeTab === "transaksi") activeTab = "pembayaran";
   if (isPmbPayer && activeTab !== "pmb") activeTab = "pmb";
 
-  const [search, setSearch] = useState("");
+  const allowedTabs = isPmbPayer
+    ? new Set(["pmb"])
+    : isStudent
+      ? new Set(pmbPaymentPortal ? ["summary", "tagihan", "pembayaran", "pmb"] : ["summary", "tagihan", "pembayaran"])
+      : canManageFinance
+        ? new Set(["summary", "tagihan", "pembayaran", "cashflow", "laporan", "setup"])
+        : isBendahara
+          ? new Set(["summary", "tagihan", "pembayaran", "cashflow"])
+          : isPimpinan
+            ? new Set(["summary", "cashflow", "laporan"])
+            : new Set(["summary"]);
+  if (!allowedTabs.has(activeTab)) activeTab = defaultTab;
 
-  // MODAL & UI STATES
-  const [, setShowAddTagihan] = useState(false);
-  const [, setShowAddMaster] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selectedTagihanIds, setSelectedTagihanIds] = useState<string[]>([]);
+  const [showAddTagihan, setShowAddTagihan] = useState(false);
+  const [showAddMaster, setShowAddMaster] = useState(false);
+  const [showImportTagihan, setShowImportTagihan] = useState(false);
+  const [showEditTagihan, setShowEditTagihan] = useState(false);
+  const [showDeleteTagihanConfirm, setShowDeleteTagihanConfirm] = useState(false);
   const [showBulkTagihan, setShowBulkTagihan] = useState<string | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showDeleteMasterConfirm, setShowDeleteMasterConfirm] = useState<string | null>(null);
   const [selectedLedger, setSelectedLedger] = useState<{ student: MahasiswaRow | null; data: StudentLedgerData } | null>(null);
+
+  const selectedBill = selectedTagihanIds.length === 1
+    ? tagihan.find((item) => item.id === selectedTagihanIds[0]) ?? null
+    : null;
 
   const handleSyncStatus = () => {
     startTransition(async () => {
@@ -139,64 +273,129 @@ export function FinanceManager({
     verifyPaymentAction(formData);
   };
 
-  const filteredTagihan = tagihan.filter((t) =>
-    t.mahasiswa?.users?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-    t.mahasiswa?.nim?.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleNotifySelected = () => {
+    const formData = new FormData();
+    formData.append("selectedIds", selectedTagihanIds.join(","));
+    sendTagihanNotificationAction(formData);
+  };
 
-  const pendingPayments = pembayaran.filter((p) => p.status === "Menunggu").length;
+  const handleNotifyOverdue = () => {
+    sendOverdueTagihanNotificationsAction();
+  };
+
+  const filteredTagihan = tagihan.filter((item) => {
+    const keyword = search.toLowerCase();
+    return (
+      item.mahasiswa?.users?.full_name?.toLowerCase().includes(keyword) ||
+      item.mahasiswa?.nim?.toLowerCase().includes(keyword) ||
+      item.jenis.toLowerCase().includes(keyword)
+    );
+  });
+
+  const pendingPayments = pembayaran.filter((p) => p.status === "Menunggu").length + pmbPembayaran.filter((p) => p.status === "Menunggu").length;
   const totalReceivables = tagihan.filter((t) => t.status === "Belum Lunas").reduce((acc, curr) => acc + Number(curr.nominal), 0);
+
+  const studentTabs = [
+    { key: "summary", label: "Ringkasan", href: "/dashboard/keuangan?tab=summary" },
+    { key: "tagihan", label: "Daftar Tagihan", href: "/dashboard/keuangan?tab=tagihan" },
+    { key: "pembayaran", label: "Riwayat Pembayaran", href: "/dashboard/keuangan?tab=pembayaran" },
+    ...(pmbPaymentPortal ? [{ key: "pmb", label: "Riwayat PMB", href: "/dashboard/keuangan?tab=pmb" }] : []),
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Tab Conditional Rendering - Performance Optimized */}
-      {activeTab === "summary" && (
+      {isStudent ? (
+        <div className="flex flex-wrap gap-2 rounded-none border border-slate-100 bg-white p-2 shadow-sm">
+          {studentTabs.map((item) => (
+            <Link
+              key={item.key}
+              href={item.href}
+              className={activeTab === item.key
+                ? "rounded-none bg-emerald-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white shadow-sm"
+                : "rounded-none px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 hover:text-slate-900"}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      ) : null}
+
+      {activeTab === "summary" && isStudent && (
+        <TabStudentSummary ledger={studentLedger} />
+      )}
+
+      {activeTab === "summary" && !isStudent && (
         <TabSummary
           summary={summary}
           totalReceivables={totalReceivables}
           pendingPayments={pendingPayments}
           onSyncStatus={handleSyncStatus}
           isPending={isPending}
+          canSyncStatus={canManageFinance}
         />
       )}
 
-      {activeTab === "pmb" && (
-        <TabPmbPayment portal={pmbPaymentPortal} />
+      {activeTab === "pmb" && <TabPmbPayment portal={pmbPaymentPortal} />}
+
+      {activeTab === "tagihan" && isStudent && (
+        <TabStudentTagihan ledger={studentLedger} />
       )}
 
-      {activeTab === "tagihan" && (
+      {activeTab === "tagihan" && !isStudent && (
         <TabTagihan
           filteredTagihan={filteredTagihan}
+          selectedIds={selectedTagihanIds}
           search={search}
           onSearchChange={setSearch}
+          onSelectionChange={setSelectedTagihanIds}
           onAddTagihan={() => setShowAddTagihan(true)}
+          onImportTagihan={() => setShowImportTagihan(true)}
+          onEditSelected={() => setShowEditTagihan(true)}
+          onDeleteSelected={() => setShowDeleteTagihanConfirm(true)}
+          onNotifySelected={handleNotifySelected}
+          onNotifyOverdue={handleNotifyOverdue}
           onViewLedger={handleViewLedger}
-          onDelete={setShowDeleteConfirm}
+          canCreateTagihan={canMutateFinance}
+          canMutateTagihan={canMutateFinance}
         />
       )}
 
-      {activeTab === "pembayaran" && (
+      {activeTab === "pembayaran" && isStudent && (
+        <TabStudentPembayaran ledger={studentLedger} />
+      )}
+
+      {activeTab === "pembayaran" && !isStudent && (
         <TabPembayaran
           pembayaran={pembayaran}
+          pmbPembayaran={pmbPembayaran}
+          cashFlow={cashFlow}
           mahasiswaList={mahasiswaList}
           onViewLedger={handleViewLedger}
-          onVerify={() => {}}
           verifyAction={handleVerify}
+          canVerify={canMutateFinance}
         />
       )}
 
-      {activeTab === "setup" && (
+      {activeTab === "cashflow" && (
+        <TabCashflow cashFlow={cashFlow} categories={categories} canMutate={canMutateFinance} />
+      )}
+
+      {activeTab === "laporan" && (
+        <TabLaporan laporanKeuangan={laporanKeuangan} />
+      )}
+
+      {activeTab === "setup" && canManageFinance && (
         <TabSetup
           masterBiayaList={masterBiayaList}
-          prodiList={prodiList}
           tahunAkademikList={tahunAkademikList}
+          prodiList={prodiList}
+          setupData={setupData}
           onAddMaster={() => setShowAddMaster(true)}
           onBulkTagihan={setShowBulkTagihan}
-          onDeleteMaster={setShowDeleteConfirm}
+          onDeleteMaster={setShowDeleteMasterConfirm}
         />
       )}
 
-      {/* Modals - Rendered only when active */}
       {selectedLedger && (
         <LedgerModal
           student={selectedLedger.student}
@@ -206,53 +405,93 @@ export function FinanceManager({
         />
       )}
 
-      {/* Bulk Tagihan Modal */}
-      {showBulkTagihan && (
-        <div className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={() => setShowBulkTagihan(null)}>
-           <Card className="w-full max-w-md shadow-2xl rounded-none border-none ring-1 ring-white/20 overflow-hidden bg-white" onClick={(e) => e.stopPropagation()}>
-              <div className="p-8 border-b border-slate-50 bg-slate-50/30 flex items-center gap-4">
-                 <div className="h-12 w-12 bg-sky-600 rounded-none flex items-center justify-center text-white shadow-xl"><Zap className="h-6 w-6" /></div>
-                 <div><h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Generate Tagihan Massal</h3><p className="text-[10px] text-sky-600 font-black uppercase tracking-widest">Proses Penagihan Otomatis</p></div>
-              </div>
-              <form action={generateBulkTagihanAction} className="p-8 space-y-6" onSubmit={() => setShowBulkTagihan(null)}>
-                 <input type="hidden" name="masterId" value={showBulkTagihan} />
-                 <div className="p-4 bg-sky-50 border border-sky-100 rounded-none">
-                    <p className="text-[10px] text-sky-700 font-bold leading-relaxed uppercase tracking-wide">
-                       Sistem akan membuat tagihan untuk seluruh mahasiswa yang aktif dan sesuai dengan kriteria tarif ini.
-                    </p>
-                 </div>
-                 <div className="space-y-4">
-                    <div>
-                       <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block tracking-widest">Tahun Akademik Target *</label>
-                       <select name="tahunAkademikId" className="w-full h-12 rounded-none border-2 border-slate-100 bg-slate-50 px-4 text-sm font-bold text-slate-700 outline-none focus:border-sky-500 focus:bg-white transition-all" required>
-                          {tahunAkademikList.map(t => <option key={t.id} value={t.id}>{t.nama}</option>)}
-                       </select>
-                    </div>
-                    <div>
-                       <label className="text-[10px] font-black text-slate-500 uppercase mb-2 block tracking-widest">Tanggal Jatuh Tempo *</label>
-                       <Input name="jatuhTempo" type="date" required className="h-12 rounded-none border-2 border-slate-100 bg-slate-50 px-4 font-black focus:border-sky-500 focus:bg-white" />
-                    </div>
-                 </div>
-                 <div className="pt-6 border-t border-slate-100 flex gap-3">
-                    <Button type="button" variant="ghost" onClick={() => setShowBulkTagihan(null)} className="flex-1 rounded-none h-11 font-black text-slate-400 uppercase text-[10px] tracking-widest">Batal</Button>
-                    <Button type="submit" className="flex-1 bg-sky-600 hover:bg-sky-700 text-white rounded-none h-11 font-black shadow-lg text-[10px] uppercase tracking-widest">Proses Sekarang</Button>
-                 </div>
+      <AddTagihanModal
+        open={showAddTagihan}
+        onClose={() => setShowAddTagihan(false)}
+        mahasiswaList={mahasiswaList}
+        tahunAkademikList={tahunAkademikList}
+      />
+
+      <EditTagihanModal
+        open={showEditTagihan}
+        onClose={() => setShowEditTagihan(false)}
+        bill={selectedBill}
+        mahasiswaList={mahasiswaList}
+        tahunAkademikList={tahunAkademikList}
+      />
+
+      <ImportTagihanModal open={showImportTagihan} onClose={() => setShowImportTagihan(false)} />
+
+      <AddMasterBiayaModal
+        open={showAddMaster}
+        onClose={() => setShowAddMaster(false)}
+        tahunAkademikList={tahunAkademikList}
+        prodiList={prodiList}
+      />
+
+      {showDeleteTagihanConfirm && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-sm" onClick={() => setShowDeleteTagihanConfirm(false)}>
+          <Card className="w-full max-w-md overflow-hidden rounded-none border-none shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="space-y-6 p-8 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center bg-rose-50 text-rose-600"><Trash2 className="h-8 w-8" /></div>
+              <div><h3 className="text-xl font-black uppercase tracking-tight text-slate-900">Hapus Tagihan</h3><p className="mt-2 text-xs font-bold uppercase leading-relaxed tracking-wider text-slate-500">{selectedTagihanIds.length} tagihan akan dihapus soft-delete.</p></div>
+              <form action={bulkSoftDeleteTagihanAction} className="flex gap-3" onSubmit={() => setShowDeleteTagihanConfirm(false)}>
+                <input type="hidden" name="selectedIds" value={selectedTagihanIds.join(",")} />
+                <Button type="button" variant="ghost" onClick={() => setShowDeleteTagihanConfirm(false)} className="h-11 flex-1 rounded-none text-[10px] font-black uppercase tracking-widest text-slate-500">Batal</Button>
+                <Button type="submit" className="h-11 flex-1 rounded-none bg-rose-600 text-[10px] font-black uppercase tracking-widest text-white hover:bg-rose-700">Hapus</Button>
               </form>
-           </Card>
+            </div>
+          </Card>
         </div>
       )}
 
-      {/* Delete Confirm Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4 animate-in fade-in duration-300" onClick={() => setShowDeleteConfirm(null)}>
-           <Card className="w-full max-w-md shadow-2xl rounded-none border-none ring-1 ring-white/10 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-              <div className="p-8 text-center space-y-6">
-                 <div className="mx-auto h-20 w-20 bg-rose-50 rounded-none flex items-center justify-center border-2 border-rose-100 animate-bounce shadow-inner"><AlertCircle className="h-10 w-10 text-rose-600" /></div>
-                 <div className="space-y-2"><h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Konfirmasi Penghapusan</h3><p className="text-xs text-slate-500 font-bold uppercase leading-relaxed tracking-wider px-4">Tindakan ini permanen. Parameter tarif akan dihapus dari sistem.</p></div>
-                 <div className="p-4 bg-slate-50 border border-slate-100"><p className="text-[10px] font-black text-slate-400 uppercase mb-1">ID TERPILIH</p><p className="text-xs font-mono font-bold text-rose-600 truncate">{showDeleteConfirm}</p></div>
-                 <div className="flex gap-3 pt-4"><Button variant="ghost" onClick={() => setShowDeleteConfirm(null)} className="flex-1 rounded-none h-12 font-black text-slate-400 uppercase tracking-widest text-[10px]">Batalkan</Button><form action={deleteMasterBiayaAction} className="flex-1" onSubmit={() => setShowDeleteConfirm(null)}><input type="hidden" name="id" value={showDeleteConfirm} /><Button type="submit" className="w-full bg-rose-600 hover:bg-rose-700 text-white rounded-none h-12 font-black shadow-xl shadow-rose-100 text-[10px] uppercase tracking-widest">Hapus Permanen</Button></form></div>
+      {showBulkTagihan && (
+        <div className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md" onClick={() => setShowBulkTagihan(null)}>
+          <Card className="w-full max-w-md overflow-hidden rounded-none border-none bg-white shadow-2xl ring-1 ring-white/20" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-4 border-b border-slate-50 bg-slate-50/30 p-8">
+              <div className="flex h-12 w-12 items-center justify-center bg-sky-600 text-white shadow-xl"><Zap className="h-6 w-6" /></div>
+              <div><h3 className="text-lg font-black uppercase tracking-tight text-slate-900">Generate Tagihan Massal</h3><p className="text-[10px] font-black uppercase tracking-widest text-sky-600">Proses Penagihan Otomatis</p></div>
+            </div>
+            <form action={generateBulkTagihanAction} className="space-y-6 p-8" onSubmit={() => setShowBulkTagihan(null)}>
+              <input type="hidden" name="masterId" value={showBulkTagihan} />
+              <div className="border border-sky-100 bg-sky-50 p-4"><p className="text-[10px] font-bold uppercase leading-relaxed tracking-wide text-sky-700">Sistem akan membuat tagihan untuk seluruh mahasiswa aktif sesuai kriteria tarif ini.</p></div>
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Tahun Akademik Target *</label>
+                  <select name="tahunAkademikId" className="h-12 w-full rounded-none border-2 border-slate-100 bg-slate-50 px-4 text-sm font-bold text-slate-700 outline-none focus:border-sky-500 focus:bg-white" required>
+                    {tahunAkademikList.map((t) => <option key={t.id} value={t.id}>{t.nama}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Tanggal Jatuh Tempo *</label>
+                  <Input name="jatuhTempo" type="date" required className="h-12 rounded-none border-2 border-slate-100 bg-slate-50 px-4 font-black focus:border-sky-500 focus:bg-white" />
+                </div>
               </div>
-           </Card>
+              <div className="flex gap-3 border-t border-slate-100 pt-6">
+                <Button type="button" variant="ghost" onClick={() => setShowBulkTagihan(null)} className="h-11 flex-1 rounded-none text-[10px] font-black uppercase tracking-widest text-slate-400">Batal</Button>
+                <Button type="submit" className="h-11 flex-1 rounded-none bg-sky-600 text-[10px] font-black uppercase tracking-widest text-white shadow-lg hover:bg-sky-700">Proses</Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {showDeleteMasterConfirm && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-sm" onClick={() => setShowDeleteMasterConfirm(null)}>
+          <Card className="w-full max-w-md overflow-hidden rounded-none border-none shadow-2xl ring-1 ring-white/10" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-6 p-8 text-center">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center border-2 border-rose-100 bg-rose-50 text-rose-600"><AlertCircle className="h-10 w-10" /></div>
+              <div><h3 className="text-xl font-black uppercase tracking-tight text-slate-900">Konfirmasi Hapus Tarif</h3><p className="mt-2 px-4 text-xs font-bold uppercase leading-relaxed tracking-wider text-slate-500">Tarif akan disembunyikan dari data aktif.</p></div>
+              <div className="border border-slate-100 bg-slate-50 p-4"><p className="mb-1 text-[10px] font-black uppercase text-slate-400">ID Terpilih</p><p className="truncate font-mono text-xs font-bold text-rose-600">{showDeleteMasterConfirm}</p></div>
+              <div className="flex gap-3 pt-4">
+                <Button variant="ghost" onClick={() => setShowDeleteMasterConfirm(null)} className="h-12 flex-1 rounded-none text-[10px] font-black uppercase tracking-widest text-slate-400">Batal</Button>
+                <form action={deleteMasterBiayaAction} className="flex-1" onSubmit={() => setShowDeleteMasterConfirm(null)}>
+                  <input type="hidden" name="id" value={showDeleteMasterConfirm} />
+                  <Button type="submit" className="h-12 w-full rounded-none bg-rose-600 text-[10px] font-black uppercase tracking-widest text-white shadow-xl shadow-rose-100 hover:bg-rose-700">Hapus</Button>
+                </form>
+              </div>
+            </div>
+          </Card>
         </div>
       )}
     </div>

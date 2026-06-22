@@ -29,6 +29,19 @@ export type MenuInput = {
   isActive: boolean;
 };
 
+type MenuDatabaseRow = {
+  id: string;
+  key: string;
+  label: string;
+  href: string;
+  icon?: string | null;
+  parent_key?: string | null;
+  sort_order?: number | null;
+  roles?: unknown;
+  is_active: boolean;
+  updated_at: string;
+};
+
 export type MenuListResult = {
   items: MenuRow[];
   totalItems: number;
@@ -48,7 +61,7 @@ function applySearch<T extends { or: (filters: string) => T }>(queryBuilder: T, 
   return queryBuilder.or(`key.ilike.%${escaped}%,label.ilike.%${escaped}%,href.ilike.%${escaped}%`);
 }
 
-function toMenuRows(rows: Array<any>): MenuRow[] {
+function toMenuRows(rows: MenuDatabaseRow[]): MenuRow[] {
   return rows.map((item) => ({
     id: item.id,
     key: item.key,
@@ -57,7 +70,7 @@ function toMenuRows(rows: Array<any>): MenuRow[] {
     icon: item.icon ?? null,
     parent_key: item.parent_key ?? null,
     sort_order: item.sort_order ?? 0,
-    roles: Array.isArray(item.roles) ? item.roles : [],
+    roles: Array.isArray(item.roles) ? item.roles as UserRole[] : [],
     is_active: item.is_active,
     updated_at: item.updated_at,
   }));
@@ -76,6 +89,15 @@ function getFallbackRows(): MenuRow[] {
     is_active: true,
     updated_at: new Date().toISOString(),
   }));
+}
+
+function mergeMissingFallbackRows(rows: MenuRow[]): MenuRow[] {
+  const existingKeys = new Set(rows.map((item) => item.key));
+  const missingRows = getFallbackRows().filter((item) => !existingKeys.has(item.key));
+
+  return [...rows, ...missingRows].sort((left, right) => {
+    return left.sort_order - right.sort_order || left.label.localeCompare(right.label);
+  });
 }
 
 export async function listMenus(params: { query?: string; page?: number; pageSize?: number } = {}): Promise<MenuListResult> {
@@ -130,7 +152,7 @@ export async function listMenus(params: { query?: string; page?: number; pageSiz
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
   return {
-    items: toMenuRows((dataResult.data ?? []) as Array<any>),
+    items: toMenuRows((dataResult.data ?? []) as MenuDatabaseRow[]),
     totalItems,
     totalPages,
     currentPage: Math.min(currentPage, totalPages),
@@ -141,7 +163,7 @@ export async function listMenus(params: { query?: string; page?: number; pageSiz
 
 export async function getMenuRowsForAccess(): Promise<MenuRow[]> {
   const result = await listMenus({ pageSize: 1000 });
-  return result.items.length > 0 ? result.items : getFallbackRows();
+  return result.items.length > 0 ? mergeMissingFallbackRows(result.items) : getFallbackRows();
 }
 
 export async function saveMenu(input: MenuInput, id?: string) {

@@ -2,13 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 import {
   createPmbRegistration,
   deletePmbFee,
+  finalizePmbSelection,
   generateNimAndCreateStudent,
+  savePmbPassingGrade,
   requestPmbPaymentGateway,
   savePmbFee,
+  savePmbSelectionComponent,
+  savePmbSelectionSchedule,
+  savePmbSelectionScore,
   submitPmbTransferPayment,
   updatePmbPaymentStatus,
   updatePmbStatus,
@@ -46,6 +52,53 @@ function parseOptionalNumber(value: FormDataEntryValue | null) {
   if (!raw) return null;
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+const pmbSelectionScheduleSchema = z.object({
+  pmbRegistrationId: z.string().uuid(),
+  tipe: z.enum(["Wawancara", "Tes Tulis", "Administrasi", "Lainnya"]),
+  scheduledAt: z.string().min(1),
+  lokasi: z.string().optional().nullable(),
+  interviewerId: z.string().uuid().optional().nullable().or(z.literal("")),
+  catatan: z.string().optional().nullable(),
+});
+
+const pmbSelectionComponentSchema = z.object({
+  id: z.string().uuid().optional().or(z.literal("")),
+  nama: z.string().min(2),
+  bobot: z.coerce.number().min(1).max(100),
+  skorMaks: z.coerce.number().min(1),
+  urutan: z.coerce.number().int().min(0),
+  isActive: z.boolean(),
+});
+
+const pmbPassingGradeSchema = z.object({
+  id: z.string().uuid().optional().or(z.literal("")),
+  tahunAkademikId: z.string().uuid().optional().nullable().or(z.literal("")),
+  prodiId: z.string().uuid().optional().nullable().or(z.literal("")),
+  jalurPendaftaran: z.string().min(1),
+  jenisPendaftaran: z.string().min(1),
+  gelombang: z.string().optional().nullable(),
+  minimumSkor: z.coerce.number().min(0).max(100),
+  isActive: z.boolean(),
+  catatan: z.string().optional().nullable(),
+});
+
+const pmbSelectionScoreSchema = z.object({
+  pmbRegistrationId: z.string().uuid(),
+  componentId: z.string().uuid(),
+  skor: z.coerce.number().min(0),
+  catatan: z.string().optional().nullable(),
+});
+
+function redirectPmbSelectionError(title: string, message = "Terjadi kesalahan sistem. Permintaan gagal diproses."): never {
+  redirect(
+    withToastParams("/dashboard/pmb?tab=seleksi", {
+      variant: "error",
+      title,
+      message,
+    }),
+  );
 }
 
 export async function registerPmbAction(_: PmbRegistrationState, formData: FormData): Promise<PmbRegistrationState> {
@@ -188,7 +241,7 @@ export async function updatePmbStatusAction(formData: FormData) {
       oldData: oldPmb,
       newData: { status_seleksi: status, skor_seleksi: skor }
     });
-  } catch (error) {
+  } catch {
     redirect(
       withToastParams("/dashboard/pmb", {
         variant: "error",
@@ -239,7 +292,7 @@ export async function savePmbFeeAction(formData: FormData) {
       recordId: id,
       newData: savedPayload,
     });
-  } catch (error) {
+  } catch {
     redirect(
       withToastParams("/dashboard/pmb?tab=tarif", {
         variant: "error",
@@ -287,7 +340,7 @@ export async function deletePmbFeeAction(formData: FormData) {
       recordId: id,
       oldData: oldFee,
     });
-  } catch (error) {
+  } catch {
     redirect(
       withToastParams("/dashboard/pmb?tab=tarif", {
         variant: "error",
@@ -331,7 +384,7 @@ export async function submitPmbTransferPaymentAction(formData: FormData) {
       tableName: "pmb_pembayaran",
       newData: { pmbRegistrationId, nominal, metode: "Transfer Bank" },
     });
-  } catch (error) {
+  } catch {
     redirect(
       withToastParams("/dashboard/keuangan?tab=pmb", {
         variant: "error",
@@ -363,7 +416,7 @@ export async function requestPmbPaymentGatewayAction(formData: FormData) {
       pmbRegistrationId,
     });
     checkoutUrl = result.checkoutUrl;
-  } catch (error) {
+  } catch {
     redirect(
       withToastParams("/dashboard/keuangan?tab=pmb", {
         variant: "error",
@@ -382,10 +435,12 @@ export async function verifyPmbPaymentAction(formData: FormData) {
 
   const id = formData.get("id")?.toString() ?? "";
   const rawStatus = formData.get("status")?.toString();
+  const rawRedirectTo = formData.get("redirectTo")?.toString() || "";
+  const redirectTo = rawRedirectTo.startsWith("/dashboard/") ? rawRedirectTo : "/dashboard/pmb?tab=pembayaran";
 
   if (rawStatus !== "Terverifikasi" && rawStatus !== "Ditolak") {
     redirect(
-      withToastParams("/dashboard/pmb?tab=pembayaran", {
+      withToastParams(redirectTo, {
         variant: "error",
         title: "Status pembayaran tidak valid",
       }),
@@ -402,9 +457,9 @@ export async function verifyPmbPaymentAction(formData: FormData) {
       recordId: id,
       newData: { status: rawStatus, verified_by: user.id },
     });
-  } catch (error) {
+  } catch {
     redirect(
-      withToastParams("/dashboard/pmb?tab=pembayaran", {
+      withToastParams(redirectTo, {
         variant: "error",
         title: "Gagal memverifikasi pembayaran PMB",
         message: "Terjadi kesalahan sistem. Permintaan gagal diproses.",
@@ -415,11 +470,189 @@ export async function verifyPmbPaymentAction(formData: FormData) {
   revalidatePath("/dashboard/pmb");
   revalidatePath("/dashboard/keuangan");
   redirect(
-    withToastParams("/dashboard/pmb?tab=pembayaran", {
+    withToastParams(redirectTo, {
       variant: "success",
       title: "Pembayaran PMB diproses",
     }),
   );
+}
+
+export async function savePmbSelectionScheduleAction(formData: FormData) {
+  const user = await requireAuthorizedUser("pmb.seleksi", ["Admin", "Prodi", "Staff"]);
+
+  const parsed = pmbSelectionScheduleSchema.safeParse({
+    pmbRegistrationId: formData.get("pmbRegistrationId")?.toString() ?? "",
+    tipe: formData.get("tipe")?.toString() ?? "Wawancara",
+    scheduledAt: formData.get("scheduledAt")?.toString() ?? "",
+    lokasi: formData.get("lokasi")?.toString() || null,
+    interviewerId: formData.get("interviewerId")?.toString() || null,
+    catatan: formData.get("catatan")?.toString() || null,
+  });
+
+  if (!parsed.success) {
+    redirectPmbSelectionError("Jadwal seleksi tidak valid", parsed.error.issues[0]?.message);
+  }
+
+  try {
+    await savePmbSelectionSchedule({
+      ...parsed.data,
+      interviewerId: parsed.data.interviewerId || null,
+      actorId: user.id,
+    });
+
+    await logActivity({
+      modul: "PMB - Seleksi",
+      aksi: "UPDATE",
+      tableName: "pmb_jadwal_seleksi",
+      recordId: parsed.data.pmbRegistrationId,
+      newData: parsed.data,
+    });
+  } catch {
+    redirectPmbSelectionError("Gagal menyimpan jadwal seleksi");
+  }
+
+  revalidatePath("/dashboard/pmb");
+  redirect(withToastParams("/dashboard/pmb?tab=seleksi", { variant: "success", title: "Jadwal seleksi disimpan" }));
+}
+
+export async function savePmbSelectionComponentAction(formData: FormData) {
+  const user = await requireAuthorizedUser("pmb.seleksi", ["Admin", "Prodi"]);
+
+  const parsed = pmbSelectionComponentSchema.safeParse({
+    id: formData.get("id")?.toString() || undefined,
+    nama: formData.get("nama")?.toString() ?? "",
+    bobot: formData.get("bobot")?.toString() ?? "",
+    skorMaks: formData.get("skorMaks")?.toString() ?? "",
+    urutan: formData.get("urutan")?.toString() ?? "0",
+    isActive: formData.get("isActive") === "on",
+  });
+
+  if (!parsed.success) {
+    redirectPmbSelectionError("Komponen seleksi tidak valid", parsed.error.issues[0]?.message);
+  }
+
+  try {
+    await savePmbSelectionComponent({
+      ...parsed.data,
+      id: parsed.data.id || undefined,
+    });
+
+    await logActivity({
+      modul: "PMB - Komponen Seleksi",
+      aksi: parsed.data.id ? "UPDATE" : "CREATE",
+      tableName: "pmb_komponen_seleksi",
+      recordId: parsed.data.id || undefined,
+      newData: { ...parsed.data, actor: user.id },
+    });
+  } catch {
+    redirectPmbSelectionError("Gagal menyimpan komponen seleksi");
+  }
+
+  revalidatePath("/dashboard/pmb");
+  redirect(withToastParams("/dashboard/pmb?tab=seleksi", { variant: "success", title: "Komponen seleksi disimpan" }));
+}
+
+export async function savePmbPassingGradeAction(formData: FormData) {
+  const user = await requireAuthorizedUser("pmb.seleksi", ["Admin", "Prodi"]);
+
+  const parsed = pmbPassingGradeSchema.safeParse({
+    id: formData.get("id")?.toString() || undefined,
+    tahunAkademikId: formData.get("tahunAkademikId")?.toString() || null,
+    prodiId: formData.get("prodiId")?.toString() || null,
+    jalurPendaftaran: formData.get("jalurPendaftaran")?.toString() || "Semua",
+    jenisPendaftaran: formData.get("jenisPendaftaran")?.toString() || "Semua",
+    gelombang: formData.get("gelombang")?.toString() || null,
+    minimumSkor: formData.get("minimumSkor")?.toString() ?? "",
+    isActive: formData.get("isActive") === "on",
+    catatan: formData.get("catatan")?.toString() || null,
+  });
+
+  if (!parsed.success) {
+    redirectPmbSelectionError("Passing grade tidak valid", parsed.error.issues[0]?.message);
+  }
+
+  try {
+    await savePmbPassingGrade({
+      ...parsed.data,
+      id: parsed.data.id || undefined,
+      tahunAkademikId: parsed.data.tahunAkademikId || null,
+      prodiId: parsed.data.prodiId || null,
+    });
+
+    await logActivity({
+      modul: "PMB - Passing Grade",
+      aksi: parsed.data.id ? "UPDATE" : "CREATE",
+      tableName: "pmb_passing_grade",
+      recordId: parsed.data.id || undefined,
+      newData: { ...parsed.data, actor: user.id },
+    });
+  } catch {
+    redirectPmbSelectionError("Gagal menyimpan passing grade");
+  }
+
+  revalidatePath("/dashboard/pmb");
+  redirect(withToastParams("/dashboard/pmb?tab=seleksi", { variant: "success", title: "Passing grade disimpan" }));
+}
+
+export async function savePmbSelectionScoreAction(formData: FormData) {
+  const user = await requireAuthorizedUser("pmb.seleksi", ["Admin", "Prodi", "Staff"]);
+
+  const parsed = pmbSelectionScoreSchema.safeParse({
+    pmbRegistrationId: formData.get("pmbRegistrationId")?.toString() ?? "",
+    componentId: formData.get("componentId")?.toString() ?? "",
+    skor: formData.get("skor")?.toString() ?? "",
+    catatan: formData.get("catatan")?.toString() || null,
+  });
+
+  if (!parsed.success) {
+    redirectPmbSelectionError("Nilai seleksi tidak valid", parsed.error.issues[0]?.message);
+  }
+
+  try {
+    await savePmbSelectionScore({
+      ...parsed.data,
+      assessorId: user.id,
+    });
+
+    await logActivity({
+      modul: "PMB - Nilai Seleksi",
+      aksi: "UPDATE",
+      tableName: "pmb_nilai_seleksi",
+      recordId: parsed.data.pmbRegistrationId,
+      newData: parsed.data,
+    });
+  } catch (error) {
+    redirectPmbSelectionError("Gagal menyimpan nilai seleksi", error instanceof Error ? error.message : undefined);
+  }
+
+  revalidatePath("/dashboard/pmb");
+  redirect(withToastParams("/dashboard/pmb?tab=seleksi", { variant: "success", title: "Nilai seleksi disimpan" }));
+}
+
+export async function finalizePmbSelectionAction(formData: FormData) {
+  await requireAuthorizedUser("pmb.seleksi", ["Admin", "Prodi"]);
+
+  const pmbRegistrationId = formData.get("pmbRegistrationId")?.toString() ?? "";
+  if (!pmbRegistrationId) {
+    redirectPmbSelectionError("Pendaftar PMB tidak valid");
+  }
+
+  try {
+    const result = await finalizePmbSelection(pmbRegistrationId);
+
+    await logActivity({
+      modul: "PMB - Seleksi",
+      aksi: "APPROVE",
+      tableName: "pmb_pendaftaran",
+      recordId: pmbRegistrationId,
+      newData: result,
+    });
+  } catch (error) {
+    redirectPmbSelectionError("Gagal finalisasi seleksi", error instanceof Error ? error.message : undefined);
+  }
+
+  revalidatePath("/dashboard/pmb");
+  redirect(withToastParams("/dashboard/pmb?tab=seleksi", { variant: "success", title: "Hasil seleksi diperbarui" }));
 }
 
 export async function updatePmbPaymentStatusAction(formData: FormData) {
@@ -463,7 +696,7 @@ export async function updatePmbPaymentStatusAction(formData: FormData) {
       oldData: oldPmb,
       newData: { status_pembayaran: paymentStatus },
     });
-  } catch (error) {
+  } catch {
     redirect(
       withToastParams("/dashboard/pmb", {
         variant: "error",
@@ -496,8 +729,11 @@ export async function generateNimAction(formData: FormData) {
     );
   }
 
+  let generatedNim = "";
+
   try {
     const { nim } = await generateNimAndCreateStudent(pmbId);
+    generatedNim = nim;
 
     // Log Activity
     await logActivity({
@@ -506,17 +742,7 @@ export async function generateNimAction(formData: FormData) {
       tableName: "mahasiswa",
       newData: { nim, message: "Generate NIM and convert to Student" }
     });
-
-    revalidatePath("/dashboard/pmb");
-    revalidatePath("/dashboard/master-data/mahasiswa");
-    redirect(
-      withToastParams("/dashboard/pmb", {
-        variant: "success",
-        title: "NIM Berhasil Digenerate",
-        message: `Mahasiswa baru berhasil dibuat dengan NIM: ${nim}`,
-      }),
-    );
-  } catch (error) {
+  } catch {
     redirect(
       withToastParams("/dashboard/pmb", {
         variant: "error",
@@ -525,4 +751,14 @@ export async function generateNimAction(formData: FormData) {
       }),
     );
   }
+
+  revalidatePath("/dashboard/pmb");
+  revalidatePath("/dashboard/master-data/mahasiswa");
+  redirect(
+    withToastParams("/dashboard/pmb", {
+      variant: "success",
+      title: "NIM Berhasil Digenerate",
+      message: `Mahasiswa baru berhasil dibuat dengan NIM: ${generatedNim}`,
+    }),
+  );
 }

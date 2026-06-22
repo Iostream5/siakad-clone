@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash, randomUUID } from "crypto";
 
+import { createAutoRegistrasiTagihanForNewMahasiswa } from "@/lib/admin/finance";
 import { createAdminClient } from "@/supabase/admin";
 
 const PMB_DOCUMENT_BUCKET = "pmb-documents";
@@ -81,6 +82,57 @@ type ResolvedPmbFee = {
   name: string;
   nominal: number;
   dueDays: number;
+};
+
+export type PmbSelectionScheduleRow = {
+  id: string;
+  pmb_pendaftaran_id: string;
+  tipe: "Wawancara" | "Tes Tulis" | "Administrasi" | "Lainnya";
+  scheduled_at: string;
+  lokasi: string | null;
+  interviewer_id: string | null;
+  status: "Terjadwal" | "Selesai" | "Batal";
+  catatan: string | null;
+  interviewer_name?: string | null;
+};
+
+export type PmbSelectionComponentRow = {
+  id: string;
+  nama: string;
+  bobot: number | string;
+  skor_maks: number | string;
+  is_active: boolean;
+  urutan: number;
+};
+
+export type PmbSelectionScoreRow = {
+  id: string;
+  pmb_pendaftaran_id: string;
+  komponen_id: string;
+  skor: number | string;
+  catatan: string | null;
+  dinilai_oleh: string | null;
+};
+
+export type PmbPassingGradeRow = {
+  id: string;
+  tahun_akademik_id: string | null;
+  prodi_id: string | null;
+  jalur_pendaftaran: string;
+  jenis_pendaftaran: string;
+  gelombang: string | null;
+  minimum_skor: number | string;
+  is_active: boolean;
+  catatan: string | null;
+  tahun_akademik?: { nama?: string | null } | null;
+  program_studi?: { nama?: string | null } | null;
+};
+
+export type PmbSelectionData = {
+  schedules: PmbSelectionScheduleRow[];
+  components: PmbSelectionComponentRow[];
+  scores: PmbSelectionScoreRow[];
+  passingGrades: PmbPassingGradeRow[];
 };
 
 type MidtransConfig = {
@@ -346,6 +398,13 @@ function createTemporaryPassword() {
   return `Pmb@${randomUUID().replace(/-/g, "").slice(0, 10)}`;
 }
 
+function getSettingInnerValue(value: unknown) {
+  if (value && typeof value === "object" && "value" in value) {
+    return (value as { value?: unknown }).value;
+  }
+  return value;
+}
+
 async function getMidtransConfig(): Promise<MidtransConfig | null> {
   const supabase = createAdminClient();
   if (!supabase) return null;
@@ -357,18 +416,18 @@ async function getMidtransConfig(): Promise<MidtransConfig | null> {
 
   if (error || !settings) return null;
 
-  const enabledSetting = settings.find(s => s.key === "payment.midtrans.enabled")?.value as any;
-  const isEnabled = enabledSetting?.value === true;
+  const enabledSetting = getSettingInnerValue(settings.find(s => s.key === "payment.midtrans.enabled")?.value);
+  const isEnabled = enabledSetting === true;
   
   if (!isEnabled) return null;
 
-  const serverKeySetting = settings.find(s => s.key === "payment.midtrans.server_key")?.value as any;
-  const serverKey = serverKeySetting?.value?.trim();
+  const serverKeySetting = getSettingInnerValue(settings.find(s => s.key === "payment.midtrans.server_key")?.value);
+  const serverKey = typeof serverKeySetting === "string" ? serverKeySetting.trim() : "";
   
   if (!serverKey) return null;
 
-  const isProductionSetting = settings.find(s => s.key === "payment.midtrans.is_production")?.value as any;
-  const isProduction = isProductionSetting?.value === true;
+  const isProductionSetting = getSettingInnerValue(settings.find(s => s.key === "payment.midtrans.is_production")?.value);
+  const isProduction = isProductionSetting === true;
 
   return {
     provider: "midtrans",
@@ -454,6 +513,26 @@ function getNestedRegistrationName(value: unknown) {
   return "Calon Mahasiswa";
 }
 
+function isUuid(value: string | null | undefined) {
+  return Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(value));
+}
+
+async function resolveExistingPublicUserId(
+  supabase: NonNullable<ReturnType<typeof createAdminClient>>,
+  userId: string | null | undefined,
+) {
+  if (!isUuid(userId)) return null;
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.id ?? null;
+}
+
 async function recordPmbPaymentIncome(
   supabase: NonNullable<ReturnType<typeof createAdminClient>>,
   values: {
@@ -489,6 +568,62 @@ async function recordPmbPaymentIncome(
   });
 
   if (error) throw error;
+}
+
+async function enqueuePmbNotification(
+  supabase: NonNullable<ReturnType<typeof createAdminClient>>,
+  values: {
+    userId: string | null | undefined;
+    event: "pmb.selection_scheduled" | "pmb.selection_result";
+    subject: string;
+    body: string;
+    relatedId: string;
+    href?: string;
+  },
+) {
+  if (!values.userId) return;
+
+  const idempotencyKey = `${values.event}:${values.userId}:${values.relatedId}`;
+  const { data: existing } = await supabase
+    .from("notifikasi")
+    .select("id")
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle();
+
+  if (!existing) {
+    const { error } = await supabase.from("notifikasi").insert({
+      id_user: values.userId,
+      judul: values.subject,
+      pesan: values.body,
+      href: values.href ?? "/dashboard/keuangan?tab=pmb",
+      type: "pmb",
+      related_type: "pmb_pendaftaran",
+      related_id: values.relatedId,
+      idempotency_key: idempotencyKey,
+    });
+
+    if (error && error.code !== "23505") throw error;
+  }
+
+  const { error: queueError } = await supabase.from("notification_queue").insert({
+    user_id: values.userId,
+    channel: "in_app",
+    event: values.event,
+    subject: values.subject,
+    body: values.body,
+    href: values.href ?? "/dashboard/keuangan?tab=pmb",
+    payload: {
+      related_type: "pmb_pendaftaran",
+      related_id: values.relatedId,
+    },
+    status: "sent",
+    attempts: 1,
+    run_at: new Date().toISOString(),
+    sent_at: new Date().toISOString(),
+    idempotency_key: idempotencyKey,
+  });
+
+  if (queueError && queueError.code !== "23505") throw queueError;
 }
 
 export async function getPmbFeeList(): Promise<PmbFeeRow[]> {
@@ -823,6 +958,302 @@ export async function getPmbList() {
   );
 }
 
+export async function getPmbSelectionData(): Promise<PmbSelectionData> {
+  const supabase = createAdminClient();
+  if (!supabase) {
+    return { schedules: [], components: [], scores: [], passingGrades: [] };
+  }
+
+  const [scheduleResult, componentResult, scoreResult, passingResult] = await Promise.all([
+    supabase
+      .from("pmb_jadwal_seleksi")
+      .select("*")
+      .order("scheduled_at", { ascending: true }),
+    supabase
+      .from("pmb_komponen_seleksi")
+      .select("*")
+      .order("urutan", { ascending: true }),
+    supabase
+      .from("pmb_nilai_seleksi")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("pmb_passing_grade")
+      .select("*, tahun_akademik:tahun_akademik_id(nama), program_studi:prodi_id(nama)")
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (scheduleResult.error) console.error("Error fetching PMB selection schedules:", scheduleResult.error);
+  if (componentResult.error) console.error("Error fetching PMB selection components:", componentResult.error);
+  if (scoreResult.error) console.error("Error fetching PMB selection scores:", scoreResult.error);
+  if (passingResult.error) console.error("Error fetching PMB passing grades:", passingResult.error);
+
+  return {
+    schedules: (scheduleResult.data ?? []) as PmbSelectionScheduleRow[],
+    components: (componentResult.data ?? []) as PmbSelectionComponentRow[],
+    scores: (scoreResult.data ?? []) as PmbSelectionScoreRow[],
+    passingGrades: (passingResult.data ?? []) as PmbPassingGradeRow[],
+  };
+}
+
+export async function savePmbSelectionSchedule(input: {
+  pmbRegistrationId: string;
+  tipe: "Wawancara" | "Tes Tulis" | "Administrasi" | "Lainnya";
+  scheduledAt: string;
+  lokasi?: string | null;
+  interviewerId?: string | null;
+  catatan?: string | null;
+  actorId: string;
+}) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Supabase admin client not available");
+  if (!input.pmbRegistrationId) throw new Error("Pendaftar PMB wajib dipilih.");
+  if (!input.scheduledAt) throw new Error("Waktu seleksi wajib diisi.");
+
+  const { data: registration, error: registrationError } = await supabase
+    .from("pmb_pendaftaran")
+    .select("id, user_id, nama_lengkap")
+    .eq("id", input.pmbRegistrationId)
+    .maybeSingle();
+
+  if (registrationError) throw registrationError;
+  if (!registration) throw new Error("Pendaftar PMB tidak ditemukan.");
+
+  const resolvedActorId = await resolveExistingPublicUserId(supabase, input.actorId);
+
+  const payload = {
+    pmb_pendaftaran_id: input.pmbRegistrationId,
+    tipe: input.tipe,
+    scheduled_at: new Date(input.scheduledAt).toISOString(),
+    lokasi: normalizeEmpty(input.lokasi),
+    interviewer_id: normalizeEmpty(input.interviewerId),
+    status: "Terjadwal",
+    catatan: normalizeEmpty(input.catatan),
+    updated_by: resolvedActorId,
+    created_by: resolvedActorId,
+  };
+
+  const { error } = await supabase
+    .from("pmb_jadwal_seleksi")
+    .upsert(payload, { onConflict: "pmb_pendaftaran_id" });
+
+  if (error) throw error;
+
+  await enqueuePmbNotification(supabase, {
+    userId: registration.user_id,
+    event: "pmb.selection_scheduled",
+    subject: "Jadwal seleksi PMB tersedia",
+    body: `${input.tipe} untuk ${registration.nama_lengkap} dijadwalkan pada ${new Date(input.scheduledAt).toLocaleString("id-ID")}.`,
+    relatedId: registration.id,
+  });
+
+  return { success: true };
+}
+
+export async function savePmbSelectionComponent(input: {
+  id?: string;
+  nama: string;
+  bobot: number;
+  skorMaks: number;
+  isActive: boolean;
+  urutan: number;
+}) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Supabase admin client not available");
+  if (!input.nama.trim()) throw new Error("Nama komponen wajib diisi.");
+  if (!Number.isFinite(input.bobot) || input.bobot <= 0 || input.bobot > 100) throw new Error("Bobot harus 1 sampai 100.");
+  if (!Number.isFinite(input.skorMaks) || input.skorMaks <= 0) throw new Error("Skor maksimal tidak valid.");
+
+  const payload = {
+    nama: input.nama.trim(),
+    bobot: input.bobot,
+    skor_maks: input.skorMaks,
+    is_active: input.isActive,
+    urutan: input.urutan,
+  };
+
+  const result = input.id
+    ? await supabase.from("pmb_komponen_seleksi").update(payload).eq("id", input.id)
+    : await supabase.from("pmb_komponen_seleksi").insert(payload);
+
+  if (result.error) throw result.error;
+  return { success: true };
+}
+
+export async function savePmbPassingGrade(input: {
+  id?: string;
+  tahunAkademikId?: string | null;
+  prodiId?: string | null;
+  jalurPendaftaran: string;
+  jenisPendaftaran: string;
+  gelombang?: string | null;
+  minimumSkor: number;
+  isActive: boolean;
+  catatan?: string | null;
+}) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Supabase admin client not available");
+  if (!Number.isFinite(input.minimumSkor) || input.minimumSkor < 0 || input.minimumSkor > 100) {
+    throw new Error("Passing grade harus 0 sampai 100.");
+  }
+
+  const payload = {
+    tahun_akademik_id: normalizeEmpty(input.tahunAkademikId),
+    prodi_id: normalizeEmpty(input.prodiId),
+    jalur_pendaftaran: input.jalurPendaftaran || "Semua",
+    jenis_pendaftaran: input.jenisPendaftaran || "Semua",
+    gelombang: normalizeEmpty(input.gelombang),
+    minimum_skor: input.minimumSkor,
+    is_active: input.isActive,
+    catatan: normalizeEmpty(input.catatan),
+  };
+
+  let targetId = input.id;
+  if (!targetId) {
+    let existingQuery = supabase
+      .from("pmb_passing_grade")
+      .select("id")
+      .eq("jalur_pendaftaran", payload.jalur_pendaftaran)
+      .eq("jenis_pendaftaran", payload.jenis_pendaftaran);
+
+    existingQuery = payload.tahun_akademik_id
+      ? existingQuery.eq("tahun_akademik_id", payload.tahun_akademik_id)
+      : existingQuery.is("tahun_akademik_id", null);
+    existingQuery = payload.prodi_id
+      ? existingQuery.eq("prodi_id", payload.prodi_id)
+      : existingQuery.is("prodi_id", null);
+    existingQuery = payload.gelombang ? existingQuery.eq("gelombang", payload.gelombang) : existingQuery.is("gelombang", null);
+
+    const { data: existing, error: existingError } = await existingQuery.maybeSingle();
+    if (existingError) throw existingError;
+    targetId = existing?.id;
+  }
+
+  const result = targetId
+    ? await supabase.from("pmb_passing_grade").update(payload).eq("id", targetId)
+    : await supabase.from("pmb_passing_grade").insert(payload);
+
+  if (result.error) throw result.error;
+  return { success: true };
+}
+
+export async function savePmbSelectionScore(input: {
+  pmbRegistrationId: string;
+  componentId: string;
+  skor: number;
+  catatan?: string | null;
+  assessorId: string;
+}) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Supabase admin client not available");
+  if (!input.pmbRegistrationId || !input.componentId) throw new Error("Data nilai seleksi tidak lengkap.");
+
+  const { data: component, error: componentError } = await supabase
+    .from("pmb_komponen_seleksi")
+    .select("id, skor_maks")
+    .eq("id", input.componentId)
+    .maybeSingle();
+
+  if (componentError) throw componentError;
+  if (!component) throw new Error("Komponen seleksi tidak ditemukan.");
+  if (!Number.isFinite(input.skor) || input.skor < 0 || input.skor > Number(component.skor_maks)) {
+    throw new Error(`Skor harus 0 sampai ${component.skor_maks}.`);
+  }
+
+  const resolvedAssessorId = await resolveExistingPublicUserId(supabase, input.assessorId);
+
+  const { error } = await supabase.from("pmb_nilai_seleksi").upsert(
+    {
+      pmb_pendaftaran_id: input.pmbRegistrationId,
+      komponen_id: input.componentId,
+      skor: input.skor,
+      catatan: normalizeEmpty(input.catatan),
+      dinilai_oleh: resolvedAssessorId,
+    },
+    { onConflict: "pmb_pendaftaran_id,komponen_id" },
+  );
+
+  if (error) throw error;
+  return { success: true };
+}
+
+function scorePassingGradeMatch(registration: {
+  prodi_pilihan_id: string | null;
+  jalur_pendaftaran: string | null;
+  jenis_pendaftaran: string | null;
+}, grade: PmbPassingGradeRow) {
+  let score = 0;
+  if (grade.prodi_id && grade.prodi_id === registration.prodi_pilihan_id) score += 8;
+  if (!grade.prodi_id) score += 1;
+  if (grade.jalur_pendaftaran === registration.jalur_pendaftaran) score += 4;
+  if (grade.jalur_pendaftaran === "Semua") score += 1;
+  if (grade.jenis_pendaftaran === registration.jenis_pendaftaran) score += 4;
+  if (grade.jenis_pendaftaran === "Semua") score += 1;
+  return score;
+}
+
+export async function finalizePmbSelection(pmbRegistrationId: string) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Supabase admin client not available");
+
+  const { data: registration, error: registrationError } = await supabase
+    .from("pmb_pendaftaran")
+    .select("id, user_id, nama_lengkap, prodi_pilihan_id, jalur_pendaftaran, jenis_pendaftaran, status_pembayaran")
+    .eq("id", pmbRegistrationId)
+    .maybeSingle();
+
+  if (registrationError) throw registrationError;
+  if (!registration) throw new Error("Pendaftar PMB tidak ditemukan.");
+  if (registration.status_pembayaran !== "paid") throw new Error("Seleksi final hanya boleh setelah pembayaran PMB lunas.");
+
+  const [{ data: components, error: componentError }, { data: scores, error: scoreError }, { data: grades, error: gradeError }] =
+    await Promise.all([
+      supabase.from("pmb_komponen_seleksi").select("*").eq("is_active", true),
+      supabase.from("pmb_nilai_seleksi").select("*").eq("pmb_pendaftaran_id", pmbRegistrationId),
+      supabase.from("pmb_passing_grade").select("*").eq("is_active", true),
+    ]);
+
+  if (componentError) throw componentError;
+  if (scoreError) throw scoreError;
+  if (gradeError) throw gradeError;
+
+  const activeComponents = ((components ?? []) as PmbSelectionComponentRow[]).filter((component) => Number(component.bobot) > 0);
+  if (activeComponents.length === 0) throw new Error("Komponen seleksi belum disiapkan.");
+
+  const scoreByComponent = new Map(((scores ?? []) as PmbSelectionScoreRow[]).map((score) => [score.komponen_id, score]));
+  const missingComponent = activeComponents.find((component) => !scoreByComponent.has(component.id));
+  if (missingComponent) throw new Error(`Nilai ${missingComponent.nama} belum diisi.`);
+
+  const totalWeight = activeComponents.reduce((sum, component) => sum + Number(component.bobot), 0);
+  const finalScore = activeComponents.reduce((sum, component) => {
+    const score = scoreByComponent.get(component.id);
+    const normalizedScore = (Number(score?.skor ?? 0) / Number(component.skor_maks)) * 100;
+    return sum + normalizedScore * (Number(component.bobot) / totalWeight);
+  }, 0);
+
+  const passingGrade = ((grades ?? []) as PmbPassingGradeRow[])
+    .map((grade) => ({ grade, score: scorePassingGradeMatch(registration, grade) }))
+    .filter((item) => item.score > 0)
+    .sort((left, right) => right.score - left.score)[0]?.grade;
+  const minimumScore = Number(passingGrade?.minimum_skor ?? 60);
+  const status = finalScore >= minimumScore ? "LULUS" : "DITOLAK";
+
+  await updatePmbStatus(pmbRegistrationId, status, Number(finalScore.toFixed(2)));
+
+  await enqueuePmbNotification(supabase, {
+    userId: registration.user_id,
+    event: "pmb.selection_result",
+    subject: status === "LULUS" ? "Hasil seleksi PMB: Lulus" : "Hasil seleksi PMB: Tidak lulus",
+    body:
+      status === "LULUS"
+        ? `Selamat, ${registration.nama_lengkap}. Anda lulus seleksi PMB dengan skor ${finalScore.toFixed(2)}.`
+        : `${registration.nama_lengkap}, hasil seleksi PMB Anda belum memenuhi passing grade.`,
+    relatedId: registration.id,
+  });
+
+  return { status, finalScore, minimumScore };
+}
+
 export async function updatePmbStatus(id: string, status: "BARU" | "VERIFIKASI" | "LULUS" | "DITOLAK", skor?: number) {
   const supabase = createAdminClient();
   if (!supabase) throw new Error("Supabase admin client not available");
@@ -949,15 +1380,34 @@ export async function submitPmbTransferPayment(values: {
   }
 
   const proofPath = await uploadPmbPaymentProof(supabase, registration.nomor_pendaftaran, values.proofFile);
-  const { error: paymentError } = await supabase.from("pmb_pembayaran").insert({
-    pmb_pendaftaran_id: registration.id,
+
+  const { data: existingPendingPayment, error: existingPaymentError } = await supabase
+    .from("pmb_pembayaran")
+    .select("id")
+    .eq("pmb_pendaftaran_id", registration.id)
+    .eq("metode", "Transfer Bank")
+    .eq("status", "Menunggu")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingPaymentError) throw existingPaymentError;
+
+  const paymentPayload = {
     nominal: values.nominal,
     metode: "Transfer Bank",
     bank_pengirim: values.bankPengirim,
     nama_pengirim: values.namaPengirim,
     bukti_url: proofPath,
     status: "Menunggu",
-  });
+  };
+
+  const { error: paymentError } = existingPendingPayment
+    ? await supabase.from("pmb_pembayaran").update(paymentPayload).eq("id", existingPendingPayment.id)
+    : await supabase.from("pmb_pembayaran").insert({
+        pmb_pendaftaran_id: registration.id,
+        ...paymentPayload,
+      });
 
   if (paymentError) throw paymentError;
 
@@ -1142,7 +1592,7 @@ export async function handleMidtransPmbNotification(payload: MidtransNotificatio
     provider: "midtrans",
     event_id: eventId,
     event_type: String(payload.transaction_status),
-    payload: payload as any,
+    payload: payload as Record<string, unknown>,
   });
 
   const orderId = normalizeMidtransString(payload.order_id);
@@ -1229,9 +1679,11 @@ export async function handleMidtransPmbNotification(payload: MidtransNotificatio
   };
 }
 
-export async function verifyPmbPayment(paymentId: string, verifierId: string, status: "Terverifikasi" | "Ditolak") {
+export async function verifyPmbPayment(paymentId: string, verifierId: string | null, status: "Terverifikasi" | "Ditolak") {
   const supabase = createAdminClient();
   if (!supabase) throw new Error("Supabase admin client not available");
+
+  const resolvedVerifierId = await resolveExistingPublicUserId(supabase, verifierId);
 
   const { data: payment, error } = await supabase
     .from("pmb_pembayaran")
@@ -1246,7 +1698,7 @@ export async function verifyPmbPayment(paymentId: string, verifierId: string, st
     .from("pmb_pembayaran")
     .update({
       status,
-      verified_by: verifierId,
+      verified_by: resolvedVerifierId,
       verified_at: new Date().toISOString(),
     })
     .eq("id", paymentId);
@@ -1270,7 +1722,7 @@ export async function verifyPmbPayment(paymentId: string, verifierId: string, st
       paymentId,
       nominal: payment.nominal,
       registrationName: getNestedRegistrationName(payment.pmb_pendaftaran),
-      createdBy: verifierId,
+      createdBy: resolvedVerifierId,
     });
   }
 
@@ -1364,19 +1816,32 @@ export async function generateNimAndCreateStudent(pmbId: string) {
   if (roleError) throw roleError;
 
   // 4. Create Mahasiswa record
-  const { error: mhsError } = await supabase.from("mahasiswa").insert({
-    user_id: userId,
-    nim: nim,
-    angkatan: angkatan,
-    prodi_id: pmb.prodi_pilihan_id,
-    nama_ibu_kandung: pmb.nama_ibu,
-    tempat_lahir: pmb.tempat_lahir,
-    tanggal_lahir: pmb.tanggal_lahir,
-    status_mahasiswa: "AKTIF",
-  });
+  const { data: mahasiswa, error: mhsError } = await supabase
+    .from("mahasiswa")
+    .insert({
+      user_id: userId,
+      nim: nim,
+      angkatan: angkatan,
+      prodi_id: pmb.prodi_pilihan_id,
+      nama_ibu_kandung: pmb.nama_ibu,
+      tempat_lahir: pmb.tempat_lahir,
+      tanggal_lahir: pmb.tanggal_lahir,
+      status_mahasiswa: "AKTIF",
+    })
+    .select("id")
+    .single();
 
   if (mhsError) {
     throw mhsError;
+  }
+
+  try {
+    await createAutoRegistrasiTagihanForNewMahasiswa({
+      mahasiswaId: mahasiswa.id,
+      userId,
+    });
+  } catch (error) {
+    console.warn("[PMB] auto registrasi tagihan failed", error instanceof Error ? error.message : error);
   }
 
   await supabase

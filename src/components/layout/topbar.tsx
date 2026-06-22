@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore, startTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
@@ -32,6 +32,9 @@ import {
 import { CommandSearch } from "@/modules/shared/command-search";
 import type { NotificationPreviewData } from "@/lib/admin/notifications";
 import type { SessionUser } from "@/types/domain";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ProfileManager } from "@/modules/dashboard/profile-manager";
 
 function formatNotificationDate(value: string) {
   const date = new Date(value);
@@ -73,6 +76,8 @@ export function Topbar({
   const clientReady = useClientReady();
   const [isDark, setIsDark] = useState(false); // Placeholder for theme state
   const [isCommandOpen, setIsCommandOpen] = useState(false);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   const unreadCount = notificationPreview.unreadCount;
   const hasUnread = unreadCount > 0;
 
@@ -274,26 +279,43 @@ export function Topbar({
                 </div>
                 
                 <DropdownMenuGroup>
-                  <DropdownMenuItem className="py-2.5 px-3 rounded-xl cursor-pointer hover:bg-slate-50 focus:bg-slate-50">
-                    <UserIcon className="mr-2 h-4 w-4 text-slate-400" />
-                    <span className="text-xs font-bold text-slate-700">Profil Saya</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="py-2.5 px-3 rounded-xl cursor-pointer hover:bg-slate-50 focus:bg-slate-50">
-                    <Settings className="mr-2 h-4 w-4 text-slate-400" />
-                    <span className="text-xs font-bold text-slate-700">Pengaturan Akun</span>
-                  </DropdownMenuItem>
+                  {isDesktop ? (
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setShowProfileDialog(true);
+                      }}
+                      className="py-2.5 px-3 rounded-xl cursor-pointer hover:bg-slate-50 focus:bg-slate-50"
+                    >
+                      <UserIcon className="mr-2 h-4 w-4 text-slate-400" />
+                      <span className="text-xs font-bold text-slate-700">Profil Saya</span>
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem asChild className="py-2.5 px-3 rounded-xl cursor-pointer hover:bg-slate-50 focus:bg-slate-50">
+                      <Link href="/dashboard/profil" className="flex items-center w-full">
+                        <UserIcon className="mr-2 h-4 w-4 text-slate-400" />
+                        <span className="text-xs font-bold text-slate-700">Profil Saya</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuGroup>
                 
                 <DropdownMenuSeparator className="my-2 bg-slate-100" />
                 
-                <form action={logoutAction}>
-                  <DropdownMenuItem asChild className="p-0">
-                    <button type="submit" className="flex w-full items-center py-2.5 px-3 rounded-xl cursor-pointer bg-rose-50/50 text-rose-600 hover:bg-rose-100 focus:bg-rose-100 transition-colors">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span className="text-xs font-black uppercase tracking-widest">Keluar Aplikasi</span>
-                    </button>
-                  </DropdownMenuItem>
-                </form>
+                <DropdownMenuItem
+                  className="p-0"
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    startTransition(() => {
+                      logoutAction();
+                    });
+                  }}
+                >
+                  <div className="flex w-full items-center py-2.5 px-3 rounded-xl cursor-pointer bg-rose-50/50 text-rose-600 hover:bg-rose-100 focus:bg-rose-100 transition-colors">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span className="text-xs font-black uppercase tracking-widest">Keluar Aplikasi</span>
+                  </div>
+                </DropdownMenuItem>
               </motion.div>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -302,6 +324,18 @@ export function Topbar({
       </div>
 
       <CommandSearch open={isCommandOpen} setOpen={setIsCommandOpen} />
+
+      <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-50">
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">Profil Pengguna</h2>
+              <p className="mt-1 text-sm text-slate-500">Kelola informasi pribadi dan keamanan akun Anda.</p>
+            </div>
+            <ProfileManager user={user} />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

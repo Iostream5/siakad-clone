@@ -1,15 +1,15 @@
-import { StudentGradeItem, LecturerClassItem, MahasiswaProfile } from "@/types/domain";
 import { requireAuthorizedUser } from "@/lib/auth";
 import { GradesManager } from "@/modules/grades/grades-manager";
-import { getStudentGrades, getLecturerIdByUserId, getLecturerClasses } from "@/lib/admin/grades";
+import { getStudentGrades, getLecturerIdByUserId, getLecturerClasses, type GradeRow } from "@/lib/admin/grades";
 import { getActiveAcademicYear } from "@/lib/admin/academic-years";
 import { getMahasiswaByUserId } from "@/lib/admin/mahasiswa";
+import type { LecturerClassItem, MahasiswaProfile } from "@/types/domain";
 
 export default async function GradePage() {
   const user = await requireAuthorizedUser("nilai", ["Admin", "Prodi", "Dosen", "Mahasiswa"]);
   const activeYear = await getActiveAcademicYear();
   
-  let gradesData: StudentGradeItem[] = [];
+  let gradesData: GradeRow[] = [];
   let lecturerClasses: LecturerClassItem[] = [];
   let studentProfile: MahasiswaProfile | null = null;
 

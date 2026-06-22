@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { deleteRuangan, upsertRuangan } from "@/lib/admin/ruangan";
-import { deleteGedung, upsertGedung } from "@/lib/admin/gedung";
+import { deleteGedung, saveGedung } from "@/lib/admin/gedung";
 import { requireAuthorizedUser } from "@/lib/auth";
 import { withToastParams } from "@/lib/toast-query";
 import { gedungSchema, ruanganSchema } from "@/lib/validators";
@@ -37,7 +37,7 @@ export async function upsertGedungAction(formData: FormData) {
   }
 
   try {
-    await upsertGedung({ ...validated.data, id });
+    await saveGedung(validated.data, id);
   } catch (error) {
     redirect(withToastParams("/dashboard/master-data/ruangan", { variant: "error", title: "Gagal menyimpan gedung", message: getErrorMessage(error) }));
   }

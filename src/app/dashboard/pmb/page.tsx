@@ -1,7 +1,8 @@
 import { connection } from "next/server";
 
 import { listAcademicYears } from "@/lib/admin/academic-years";
-import { getPmbFeeList, getPmbList } from "@/lib/admin/pmb";
+import { listDosen } from "@/lib/admin/dosen";
+import { getPmbFeeList, getPmbList, getPmbSelectionData } from "@/lib/admin/pmb";
 import { getStudyProgramList } from "@/lib/admin/study-programs";
 import { requireAuthorizedUser } from "@/lib/auth";
 import { PmbManager, type PmbItem } from "@/modules/pmb/pmb-manager";
@@ -11,11 +12,13 @@ export default async function PmbPage() {
   await connection();
 
   const user = await requireAuthorizedUser("pmb", ["Admin", "Prodi", "Staff", "Keuangan"]);
-  const [items, pmbFees, academicYears, studyPrograms] = await Promise.all([
+  const [items, pmbFees, selectionData, academicYears, studyPrograms, lecturers] = await Promise.all([
     getPmbList(),
     getPmbFeeList(),
+    getPmbSelectionData(),
     listAcademicYears({ pageSize: 100 }),
     getStudyProgramList(),
+    listDosen({ pageSize: 200 }),
   ]);
 
   return (
@@ -24,8 +27,10 @@ export default async function PmbPage() {
       <PmbManager
         items={items as PmbItem[]}
         pmbFees={pmbFees}
+        selectionData={selectionData}
         academicYears={academicYears.items}
         studyPrograms={studyPrograms}
+        lecturers={lecturers.items}
         userRole={user.role}
       />
     </div>

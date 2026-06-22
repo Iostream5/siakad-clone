@@ -93,18 +93,19 @@ export default function LedgerModal({ student, ledgerData, onClose, userRole }: 
   const { summary } = ledgerData;
   const isStudent = userRole === "Mahasiswa";
   const [isPaying, setIsPaying] = useState<string | null>(null);
-  const { success, error } = useToast();
+  const router = useRouter();
+  const { error } = useToast();
 
   const handlePayMidtrans = async (tagihanId: string) => {
     setIsPaying(tagihanId);
     try {
       const result = await requestFinancePaymentGatewayAction(tagihanId);
       if (result.success && result.checkoutUrl) {
-        window.location.href = result.checkoutUrl;
+        router.push(result.checkoutUrl);
       } else {
         error("Gagal", result.error || "Gagal membuat koneksi pembayaran.");
       }
-    } catch (e) {
+    } catch {
       error("Error", "Terjadi kesalahan sistem saat menghubungi payment gateway.");
     } finally {
       setIsPaying(null);
@@ -302,14 +303,14 @@ export default function LedgerModal({ student, ledgerData, onClose, userRole }: 
                             <p className="mt-1 text-[10px] font-medium text-slate-400">{formatDate(item.verified_at, true)}</p>
                           </TD>
                           <TD>
-                            {item.bukti_url ? (
+                            {(item.bukti_url || item.checkout_url) ? (
                               <a
-                                href={item.bukti_url}
+                                href={item.bukti_url ?? item.checkout_url ?? "#"}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-cyan-700 hover:text-cyan-900"
                               >
-                                Lihat <ExternalLink className="h-3 w-3" />
+                                Lihat bukti <ExternalLink className="h-3 w-3" />
                               </a>
                             ) : (
                               <span className="text-[10px] font-bold text-slate-300">-</span>

@@ -130,7 +130,7 @@ export async function listMataKuliah(params: { query?: string; page?: number; pa
     jenis: item.jenis,
     is_active: item.is_active,
     updated_at: item.updated_at,
-    program_studi: item.program_studi?.[0] ?? null,
+    program_studi: Array.isArray(item.program_studi) ? (item.program_studi[0] ?? null) : (item.program_studi ?? null),
   }));
 
   return {
@@ -312,7 +312,7 @@ export async function exportMataKuliah(query?: string) {
     jenis: item.jenis,
     is_active: item.is_active,
     updated_at: item.updated_at,
-    program_studi: item.program_studi?.[0] ?? null,
+    program_studi: Array.isArray(item.program_studi) ? (item.program_studi[0] ?? null) : (item.program_studi ?? null),
   }));
 }
 

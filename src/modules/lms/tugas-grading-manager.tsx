@@ -1,17 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { 
   ArrowLeft, 
-  CheckCircle2, 
   Clock, 
   FileText, 
-  MoreVertical, 
   Search, 
   User,
   ExternalLink,
-  ClipboardCheck,
-  AlertCircle
 } from "lucide-react";
 import Link from "next/link";
 
@@ -24,14 +20,37 @@ import { GradeSubmissionModal } from "./modals/grade-submission-modal";
 import { cn } from "@/lib/utils";
 
 interface TugasGradingManagerProps {
-  user: any;
-  tugas: any;
-  initialSubmissions: any[];
+  user: { role: string };
+  tugas: LmsTugasDetail;
+  initialSubmissions: LmsSubmissionForGrading[];
+  canGrade: boolean;
 }
 
-export function TugasGradingManager({ user, tugas, initialSubmissions }: TugasGradingManagerProps) {
+type LmsTugasDetail = {
+  id: string;
+  jadwal_id: string;
+  judul: string;
+  deadline: string;
+  poin_max: number;
+};
+
+type LmsSubmissionForGrading = {
+  id: string;
+  konten_teks?: string | null;
+  file_url?: string | null;
+  nilai?: number | null;
+  umpan_balik?: string | null;
+  submitted_at: string;
+  mahasiswa?: {
+    id: string;
+    nim: string | null;
+    users?: { full_name: string } | null;
+  } | null;
+};
+
+export function TugasGradingManager({ user, tugas, initialSubmissions, canGrade }: TugasGradingManagerProps) {
   const [search, setSearch] = useState("");
-  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<LmsSubmissionForGrading | null>(null);
 
   const filtered = initialSubmissions.filter(s => 
     s.mahasiswa?.users?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -67,14 +86,9 @@ export function TugasGradingManager({ user, tugas, initialSubmissions }: TugasGr
                 <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> Max {tugas.poin_max} Poin</span>
              </div>
           </div>
-          <div className="flex gap-3">
-             <Button variant="outline" className="border-slate-200 rounded-xl font-bold text-xs uppercase tracking-widest h-12 px-6">
-                Download Semua
-             </Button>
-             <Button className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black uppercase tracking-widest text-xs h-12 px-8 shadow-lg shadow-indigo-100">
-                Publish Nilai
-             </Button>
-          </div>
+          <Badge className="bg-slate-100 text-slate-600 border-slate-200 font-black text-[10px] uppercase tracking-wider px-3">
+            {canGrade ? "Mode Penilaian" : `Read Only ${user.role}`}
+          </Badge>
         </div>
       </Card>
 
@@ -122,7 +136,7 @@ export function TugasGradingManager({ user, tugas, initialSubmissions }: TugasGr
                   const isGraded = item.nilai !== null;
 
                   return (
-                    <TR key={item.id} className="hover:bg-slate-50/50 transition-colors cursor-pointer" onClick={() => setSelectedSubmission(item)}>
+                    <TR key={item.id} className="hover:bg-slate-50/50 transition-colors">
                       <TD className="text-slate-400 font-bold text-xs">{idx + 1}</TD>
                       <TD>
                         <div className="flex items-center gap-3">
@@ -168,9 +182,17 @@ export function TugasGradingManager({ user, tugas, initialSubmissions }: TugasGr
                         </span>
                       </TD>
                       <TD className="text-right">
-                        <Button size="sm" className="bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest text-[9px] h-9 px-4 rounded-lg">
-                           Beri Nilai
-                        </Button>
+                        {canGrade ? (
+                          <Button
+                            size="sm"
+                            className="bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest text-[9px] h-9 px-4 rounded-lg"
+                            onClick={() => setSelectedSubmission(item)}
+                          >
+                            Beri Nilai
+                          </Button>
+                        ) : (
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Pantau</span>
+                        )}
                       </TD>
                     </TR>
                   );
@@ -181,12 +203,14 @@ export function TugasGradingManager({ user, tugas, initialSubmissions }: TugasGr
         </Card>
       </div>
 
-      <GradeSubmissionModal 
-        isOpen={!!selectedSubmission} 
-        onClose={() => setSelectedSubmission(null)} 
-        submission={selectedSubmission}
-        maxPoints={tugas.poin_max}
-      />
+      {canGrade && (
+        <GradeSubmissionModal
+          isOpen={!!selectedSubmission}
+          onClose={() => setSelectedSubmission(null)}
+          submission={selectedSubmission}
+          maxPoints={tugas.poin_max}
+        />
+      )}
     </div>
   );
 }

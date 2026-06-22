@@ -102,6 +102,19 @@ export function AddMateriModal({ isOpen, onClose, jadwalId }: AddMateriModalProp
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="isVisible" className="text-[10px] font-black uppercase tracking-widest text-slate-500">Tampilkan ke Mahasiswa</Label>
+            <Select name="isVisible" defaultValue="true">
+              <SelectTrigger className="h-12 rounded-xl border-slate-200 font-bold">
+                <SelectValue placeholder="Pilih status" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-slate-100">
+                <SelectItem value="true">Tampil</SelectItem>
+                <SelectItem value="false">Sembunyikan dulu</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <DialogFooter className="pt-4">
             <Button 
               type="button" 

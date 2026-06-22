@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/supabase/admin";
+import { gedungSchema } from "@/lib/validators";
 
 export type GedungRow = {
   id: string;
@@ -9,55 +10,204 @@ export type GedungRow = {
   jumlah_lantai: number;
   keterangan: string | null;
   is_active: boolean;
+  updated_at: string;
 };
 
-export async function listGedung() {
-  const supabase = createAdminClient();
-  if (!supabase) return [];
+export type GedungListResult = {
+  items: GedungRow[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  query: string;
+};
 
-  const { data, error } = await supabase
-    .from("gedung")
-    .select("*")
-    .is("deleted_at", null)
-    .order("nama", { ascending: true });
+export type GedungInput = {
+  kode: string;
+  nama: string;
+  jumlahLantai: number;
+  keterangan?: string;
+  isAktif: boolean;
+};
 
-  if (error) {
-    console.error("Error listing gedung:", error);
-    return [];
-  }
-
-  return data || [];
+function normalizeQuery(value?: string) {
+  return (value ?? "").trim();
 }
 
-export async function upsertGedung(values: any) {
+function applySearch<T extends { or: (filters: string) => T }>(queryBuilder: T, query: string) {
+  if (!query) return queryBuilder;
+  const escaped = query.replace(/[%_,]/g, "");
+  return queryBuilder.or(`kode.ilike.%${escaped}%,nama.ilike.%${escaped}%`);
+}
+
+export async function listGedung(params: { query?: string; page?: number; pageSize?: number; deletedMode?: "active" | "trash" | "all" } = {}): Promise<GedungListResult> {
   const supabase = createAdminClient();
-  if (!supabase) throw new Error("Client error");
+  if (!supabase) {
+    return { items: [], totalItems: 0, totalPages: 1, currentPage: 1, query: normalizeQuery(params.query) };
+  }
+
+  const pageSize = Math.max(1, params.pageSize ?? 10);
+  const currentPage = Math.max(1, params.page ?? 1);
+  const query = normalizeQuery(params.query);
+  const deletedMode = params.deletedMode ?? "active";
+  const from = (currentPage - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let countBuilder = supabase.from("gedung").select("id", { count: "exact", head: true });
+  let dataBuilder = supabase
+    .from("gedung")
+    .select("id, kode, nama, jumlah_lantai, keterangan, is_active, updated_at")
+    .order("updated_at", { ascending: false })
+    .range(from, to);
+
+  if (deletedMode === "active") {
+    countBuilder = countBuilder.is("deleted_at", null);
+    dataBuilder = dataBuilder.is("deleted_at", null);
+  } else if (deletedMode === "trash") {
+    countBuilder = countBuilder.not("deleted_at", "is", null);
+    dataBuilder = dataBuilder.not("deleted_at", "is", null);
+  }
+
+  const countQuery = applySearch(countBuilder, query);
+  const dataQuery = applySearch(dataBuilder, query);
+
+  const [countResult, dataResult] = await Promise.all([countQuery, dataQuery]);
+  const totalItems = countResult.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  return {
+    items: (dataResult.data ?? []) as GedungRow[],
+    totalItems,
+    totalPages,
+    currentPage: Math.min(currentPage, totalPages),
+    query,
+  };
+}
+
+export async function saveGedung(input: GedungInput, id?: string) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Konfigurasi service role Supabase belum tersedia di server.");
+
+  const parsed = gedungSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Data gedung tidak valid.");
+  }
 
   const payload = {
-    kode: values.kode,
-    nama: values.nama,
-    jumlah_lantai: values.jumlahLantai,
-    is_active: values.isAktif,
+    kode: parsed.data.kode,
+    nama: parsed.data.nama,
+    jumlah_lantai: parsed.data.jumlahLantai,
+    keterangan: parsed.data.keterangan || null,
+    is_active: parsed.data.isAktif,
   };
 
-  let result;
-  if (values.id) {
-    result = await supabase.from("gedung").update(payload).eq("id", values.id);
-  } else {
-    result = await supabase.from("gedung").insert(payload);
-  }
+  const result = id
+    ? await supabase.from("gedung").update(payload).eq("id", id)
+    : await supabase.from("gedung").insert(payload);
 
-  if (result.error) {
-    console.error("Supabase error in upsertGedung:", result.error);
-    throw new Error(result.error.message);
-  }
+  if (result.error) throw new Error(result.error.message);
 }
 
 export async function deleteGedung(id: string) {
   const supabase = createAdminClient();
-  if (!supabase) throw new Error("Client error");
-  
-  const { error } = await supabase.from("gedung").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  
-  if (error) throw new Error(error.message);
+  if (!supabase) throw new Error("Konfigurasi service role Supabase belum tersedia di server.");
+
+  const result = await supabase.from("gedung").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+  if (result.error) throw new Error(result.error.message);
+}
+
+export async function restoreGedung(id: string) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Konfigurasi service role Supabase belum tersedia di server.");
+
+  const result = await supabase.from("gedung").update({ deleted_at: null }).eq("id", id);
+  if (result.error) throw new Error(result.error.message);
+}
+
+export async function hardDeleteGedung(id: string) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Konfigurasi service role Supabase belum tersedia di server.");
+
+  const result = await supabase.from("gedung").delete().eq("id", id);
+  if (result.error) throw new Error(result.error.message);
+}
+
+export async function bulkDeleteGedung(ids: string[]) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Konfigurasi service role Supabase belum tersedia di server.");
+  const result = await supabase.from("gedung").update({ deleted_at: new Date().toISOString() }).in("id", ids);
+  if (result.error) throw new Error(result.error.message);
+}
+
+export async function bulkRestoreGedung(ids: string[]) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Konfigurasi service role Supabase belum tersedia di server.");
+  const result = await supabase.from("gedung").update({ deleted_at: null }).in("id", ids);
+  if (result.error) throw new Error(result.error.message);
+}
+
+export async function bulkHardDeleteGedung(ids: string[]) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Konfigurasi service role Supabase belum tersedia di server.");
+  const result = await supabase.from("gedung").delete().in("id", ids);
+  if (result.error) throw new Error(result.error.message);
+}
+
+export async function importGedungFromCsv(content: string) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Konfigurasi service role Supabase belum tersedia di server.");
+
+  const lines = content.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length <= 1) throw new Error("File import kosong atau hanya berisi header.");
+
+  const headers = lines[0].split(",").map((item) => item.trim().toLowerCase());
+  const requiredHeaders = ["kode", "nama", "jumlah_lantai", "keterangan", "is_active"];
+
+  if (!requiredHeaders.every((header) => headers.includes(header))) {
+    throw new Error("Header CSV tidak valid. Gunakan: kode,nama,jumlah_lantai,keterangan,is_active");
+  }
+
+  const rows = lines.slice(1).map((line, index) => {
+    const values = line.split(",").map((item) => item.trim());
+    const record = Object.fromEntries(headers.map((header, headerIndex) => [header, values[headerIndex] ?? ""]));
+    const parsed = gedungSchema.safeParse({
+      kode: record.kode,
+      nama: record.nama,
+      jumlahLantai: parseInt(record.jumlah_lantai) || 1,
+      keterangan: record.keterangan,
+      isAktif: ["1", "true", "ya", "yes"].includes((record.is_active ?? "").toLowerCase()),
+    });
+
+    if (!parsed.success) {
+      throw new Error(`Baris ${index + 2}: ${parsed.error.issues[0]?.message ?? "Data tidak valid"}`);
+    }
+
+    return {
+      kode: parsed.data.kode,
+      nama: parsed.data.nama,
+      jumlah_lantai: parsed.data.jumlahLantai,
+      keterangan: parsed.data.keterangan || null,
+      is_active: parsed.data.isAktif,
+    };
+  });
+
+  const result = await supabase.from("gedung").upsert(rows, { onConflict: "kode" });
+  if (result.error) throw new Error(result.error.message);
+
+  return { imported: rows.length };
+}
+
+export async function exportGedung(query?: string) {
+  const supabase = createAdminClient();
+  if (!supabase) return [];
+
+  const result = await applySearch(
+    supabase
+      .from("gedung")
+      .select("id, kode, nama, jumlah_lantai, keterangan, is_active, updated_at")
+      .is("deleted_at", null)
+      .order("updated_at", { ascending: false }),
+    normalizeQuery(query),
+  );
+
+  return (result.data ?? []) as GedungRow[];
 }

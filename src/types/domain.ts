@@ -79,18 +79,45 @@ export type KrsSubmissionItem = {
   id: string;
   status: string;
   total_sks: number;
+  catatan_dosen?: string | null;
   updated_at: string;
   mahasiswa: {
     id: string;
     nim: string | null;
+    prodi_id?: string | null;
     users: { full_name: string } | { full_name: string }[] | null;
-    program_studi: { nama: string } | { nama: string }[] | null;
+    program_studi: { id?: string; nama: string } | { id?: string; nama: string }[] | null;
   } | {
     id: string;
     nim: string;
+    prodi_id?: string | null;
     users: { full_name: string } | { full_name: string }[] | null;
-    program_studi: { nama: string } | { nama: string }[] | null;
+    program_studi: { id?: string; nama: string } | { id?: string; nama: string }[] | null;
   }[] | null;
+  dosen_wali?: {
+    id_dosen: string;
+    dosen: { users: { full_name: string } | { full_name: string }[] | null } | { users: { full_name: string } | { full_name: string }[] | null }[] | null;
+  } | null;
+  krs_detail?: Array<{
+    id: string;
+    jadwal: {
+      id: string;
+      hari: string;
+      jam_mulai: string;
+      jam_selesai: string;
+      ruangan: string;
+      mata_kuliah: { kode: string; nama: string; sks: number } | { kode: string; nama: string; sks: number }[] | null;
+      dosen: { users: { full_name: string } | { full_name: string }[] | null } | { users: { full_name: string } | { full_name: string }[] | null }[] | null;
+    } | {
+      id: string;
+      hari: string;
+      jam_mulai: string;
+      jam_selesai: string;
+      ruangan: string;
+      mata_kuliah: { kode: string; nama: string; sks: number } | { kode: string; nama: string; sks: number }[] | null;
+      dosen: { users: { full_name: string } | { full_name: string }[] | null } | { users: { full_name: string } | { full_name: string }[] | null }[] | null;
+    }[] | null;
+  }>;
 };
 
 export type StudentGradeItem = {

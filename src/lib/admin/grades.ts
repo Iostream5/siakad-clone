@@ -17,6 +17,34 @@ export type GradeRow = {
   } | null;
 };
 
+type RelationOne<T> = T | T[] | null;
+
+type ClassStudentQueryRow = {
+  id: string;
+  krs_header?: RelationOne<{
+    id_mahasiswa: string;
+    mahasiswa?: RelationOne<{
+      nim: string | null;
+      users?: RelationOne<{
+        full_name: string | null;
+      }>;
+    }>;
+  }>;
+};
+
+type NilaiAkhirRow = {
+  id: string;
+  mahasiswa_id: string;
+  jadwal_id: string;
+  nilai_angka: number | null;
+  nilai_huruf: string | null;
+  published_at: string | null;
+};
+
+function firstRelation<T>(value: RelationOne<T>) {
+  return Array.isArray(value) ? value[0] ?? null : value;
+}
+
 /**
  * Konversi nilai angka ke huruf sesuai standar akademik STAI
  */
@@ -71,7 +99,7 @@ export async function getStudentGrades(mahasiswaId: string, options: { published
     return [];
   }
 
-  return data as any[];
+  return (data ?? []) as GradeRow[];
 }
 
 export async function getLecturerIdByUserId(userId: string) {
@@ -154,7 +182,8 @@ export async function getClassStudentsWithGrades(jadwalId: string) {
         )
       )
     `)
-    .eq("id_jadwal", jadwalId);
+    .eq("id_jadwal", jadwalId)
+    .eq("krs_header.status", "Disetujui");
 
   if (error) {
     console.error("Error fetching class students:", error);
@@ -167,13 +196,15 @@ export async function getClassStudentsWithGrades(jadwalId: string) {
     .select("*")
     .eq("jadwal_id", jadwalId);
 
-  return (data || []).map((item: any) => {
-    const student = item.krs_header?.mahasiswa;
-    const grade = grades?.find(g => g.mahasiswa_id === item.krs_header?.id_mahasiswa);
+  return ((data ?? []) as ClassStudentQueryRow[]).map((item) => {
+    const header = firstRelation(item.krs_header ?? null);
+    const student = firstRelation(header?.mahasiswa ?? null);
+    const user = firstRelation(student?.users ?? null);
+    const grade = ((grades ?? []) as NilaiAkhirRow[]).find(g => g.mahasiswa_id === header?.id_mahasiswa);
     return {
-      mahasiswa_id: item.krs_header?.id_mahasiswa,
+      mahasiswa_id: header?.id_mahasiswa,
       nim: student?.nim,
-      full_name: student?.users?.[0]?.full_name,
+      full_name: user?.full_name,
       nilai_angka: grade?.nilai_angka || null,
       nilai_huruf: grade?.nilai_huruf || null,
       published_at: grade?.published_at || null,
@@ -221,7 +252,7 @@ export async function recalculateStudentGPA(mahasiswaId: string) {
   let totalPoints = 0;
   let totalSks = 0;
 
-  grades.forEach((item: any) => {
+  grades.forEach((item) => {
     if (item.nilai_huruf && item.jadwal?.mata_kuliah?.sks) {
       const point = getGradePoint(item.nilai_huruf);
       const sks = item.jadwal.mata_kuliah.sks;

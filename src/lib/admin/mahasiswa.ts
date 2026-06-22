@@ -115,8 +115,8 @@ export async function getMahasiswaByUserId(userId: string): Promise<MahasiswaRow
     ipk: Number(item.ipk),
     prodi_id: item.prodi_id,
     updated_at: item.updated_at,
-    users: item.users?.[0] ?? null,
-    program_studi: item.program_studi?.[0] ?? null,
+    users: Array.isArray(item.users) ? (item.users[0] ?? null) : (item.users ?? null),
+    program_studi: Array.isArray(item.program_studi) ? (item.program_studi[0] ?? null) : (item.program_studi ?? null),
   };
 }
 
@@ -160,8 +160,8 @@ export async function listMahasiswa(params: { query?: string; page?: number; pag
     ipk: Number(item.ipk),
     prodi_id: item.prodi_id,
     updated_at: item.updated_at,
-    users: item.users?.[0] ?? null,
-    program_studi: item.program_studi?.[0] ?? null,
+    users: Array.isArray(item.users) ? (item.users[0] ?? null) : (item.users ?? null),
+    program_studi: Array.isArray(item.program_studi) ? (item.program_studi[0] ?? null) : (item.program_studi ?? null),
   }));
 
   return {

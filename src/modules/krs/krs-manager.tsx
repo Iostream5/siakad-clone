@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useActionState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import type { ReactNode } from "react";
 import { BookOpen, Search, UserCheck, Eye, Send, AlertCircle } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
@@ -9,11 +9,107 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { approveKrsAction, submitKrsAction } from "@/actions/krs";
+import { approveKrsAction, assignDosenWaliAction, submitKrsAction } from "@/actions/krs";
+import type { DosenWaliCandidate, JadwalRow, KrsSubmitEligibility } from "@/lib/admin/krs";
+import type { KrsSubmissionItem } from "@/types/domain";
 
-const initialState = { success: false, message: null };
+type MaybeArray<T> = T | T[] | null | undefined;
 
-function ModalShell({ open, title, description, onClose, children }: any) {
+type KrsRelationObject<T> = T extends Array<infer U> ? U : NonNullable<T>;
+
+type KrsSubmissionMahasiswa = KrsRelationObject<KrsSubmissionItem["mahasiswa"]>;
+
+type CurrentKrs = {
+  id: string;
+  status: string;
+  total_sks: number | null;
+  krs_detail?: Array<{
+    jadwal: MaybeArray<{ id: string }>;
+  }> | null;
+} | null;
+
+type KrsPageUser = {
+  role: string;
+  mahasiswaId?: string | null;
+};
+
+type TahunAkademik = {
+  id: string;
+  nama?: string | null;
+};
+
+type KrsManagerProps = {
+  availableJadwal: JadwalRow[];
+  currentKrs: CurrentKrs;
+  user: KrsPageUser;
+  tahunAkademik: TahunAkademik;
+  submissions?: KrsSubmissionItem[];
+  krsEligibility?: KrsSubmitEligibility | null;
+  dosenWaliCandidates?: DosenWaliCandidate[];
+};
+
+type ModalShellProps = {
+  open: boolean;
+  title: string;
+  description: string;
+  onClose: () => void;
+  children: ReactNode;
+};
+
+type ApproveKrsModalProps = {
+  open: boolean;
+  onClose: () => void;
+  item: KrsSubmissionItem | null;
+};
+
+function firstRelation<T>(value: MaybeArray<T>): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+function getSubmissionMahasiswa(item: KrsSubmissionItem | null) {
+  return firstRelation(item?.mahasiswa as MaybeArray<KrsSubmissionMahasiswa>);
+}
+
+function getAdvisorName(item: KrsSubmissionItem) {
+  const advisor = firstRelation(item.dosen_wali?.dosen);
+  const profile = firstRelation(advisor?.users);
+  return profile?.full_name ?? null;
+}
+
+function AssignDosenWaliForm({
+  item,
+  candidates,
+}: {
+  item: KrsSubmissionItem;
+  candidates: DosenWaliCandidate[];
+}) {
+  const mahasiswa = getSubmissionMahasiswa(item);
+  const currentDosenId = item.dosen_wali?.id_dosen ?? "";
+  const prodiCandidates = candidates.filter((candidate) => !mahasiswa?.prodi_id || candidate.prodi_id === mahasiswa.prodi_id);
+
+  if (!mahasiswa) return <span className="text-xs text-slate-400">Data mahasiswa tidak lengkap</span>;
+  if (prodiCandidates.length === 0) return <span className="text-xs font-semibold text-amber-600">Belum ada kandidat dosen wali</span>;
+
+  return (
+    <form action={assignDosenWaliAction} className="flex min-w-56 items-center gap-2">
+      <input type="hidden" name="mahasiswaId" value={mahasiswa.id} />
+      <select
+        name="dosenId"
+        defaultValue={currentDosenId}
+        className="h-9 min-w-40 rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700"
+      >
+        <option value="">Pilih dosen</option>
+        {prodiCandidates.map((candidate) => (
+          <option key={candidate.id} value={candidate.id}>{candidate.full_name}</option>
+        ))}
+      </select>
+      <Button type="submit" variant="secondary" size="sm" className="h-9 px-3 text-xs">Simpan</Button>
+    </form>
+  );
+}
+
+function ModalShell({ open, title, description, onClose, children }: ModalShellProps) {
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -37,13 +133,14 @@ function ModalShell({ open, title, description, onClose, children }: any) {
   );
 }
 
-function ApproveKrsModal({ open, onClose, item }: any) {
-  const router = useRouter();
-  const [state, formAction] = useActionState(approveKrsAction as any, initialState);
-
-  useEffect(() => { if (state?.success) { onClose(); router.refresh(); } }, [onClose, router, state?.success]);
-
+function ApproveKrsModal({ open, onClose, item }: ApproveKrsModalProps) {
   if (!item) return null;
+
+  const mahasiswa = getSubmissionMahasiswa(item);
+  const profile = firstRelation(mahasiswa?.users);
+  const prodi = firstRelation(mahasiswa?.program_studi);
+  const details = item.krs_detail ?? [];
+  const canProcess = item.status === "Diajukan";
 
   return (
     <ModalShell
@@ -56,25 +153,51 @@ function ApproveKrsModal({ open, onClose, item }: any) {
              <div className="grid grid-cols-2 gap-4">
                 <div>
                    <p className="text-xs text-slate-500 uppercase">Mahasiswa</p>
-                   <p className="font-bold text-slate-900">{item.mahasiswa?.users?.full_name}</p>
+                   <p className="font-bold text-slate-900">{profile?.full_name ?? "-"}</p>
                 </div>
                 <div>
                    <p className="text-xs text-slate-500 uppercase">NIM / Prodi</p>
-                   <p className="font-medium text-slate-700">{item.mahasiswa?.nim} - {item.mahasiswa?.program_studi?.nama}</p>
+                   <p className="font-medium text-slate-700">{mahasiswa?.nim ?? "-"} - {prodi?.nama ?? "-"}</p>
                 </div>
              </div>
           </div>
 
           <div className="max-h-60 overflow-y-auto border rounded-xl">
              <Table>
-                <THead><TR><TH>Kode</TH><TH>Mata Kuliah</TH><TH>SKS</TH></TR></THead>
+                <THead><TR><TH>Kode</TH><TH>Mata Kuliah</TH><TH>Jadwal</TH><TH>Dosen</TH><TH>SKS</TH></TR></THead>
                 <TBody>
-                   <TR><TD colSpan={3} className="text-center text-xs py-4 text-slate-400 italic">Total SKS yang diajukan: {item.total_sks} SKS</TD></TR>
+                  {details.map((detail) => {
+                    const jadwal = firstRelation(detail.jadwal);
+                    const mataKuliah = firstRelation(jadwal?.mata_kuliah);
+                    const dosen = firstRelation(jadwal?.dosen);
+                    const dosenProfile = firstRelation(dosen?.users);
+
+                    return (
+                      <TR key={detail.id}>
+                        <TD className="text-xs font-bold">{mataKuliah?.kode ?? "-"}</TD>
+                        <TD className="text-sm font-medium text-slate-800">{mataKuliah?.nama ?? "-"}</TD>
+                        <TD className="text-xs text-slate-600">{jadwal ? `${jadwal.hari}, ${jadwal.jam_mulai} - ${jadwal.jam_selesai}` : "-"}</TD>
+                        <TD className="text-xs text-slate-600">{dosenProfile?.full_name ?? "-"}</TD>
+                        <TD className="text-sm font-bold">{mataKuliah?.sks ?? 0}</TD>
+                      </TR>
+                    );
+                  })}
+                  <TR>
+                    <TD colSpan={5} className="text-center text-xs py-4 text-slate-400 italic">
+                      Total SKS yang diajukan: {item.total_sks} SKS
+                    </TD>
+                  </TR>
                 </TBody>
              </Table>
           </div>
 
-          <form action={formAction} className="space-y-4 pt-4 border-t">
+          {!canProcess ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-medium text-slate-600">
+              KRS ini sudah berstatus {item.status} dan tidak bisa diproses ulang tanpa revisi mahasiswa.
+            </div>
+          ) : null}
+
+          <form action={approveKrsAction} className="space-y-4 pt-4 border-t">
              <input type="hidden" name="krsId" value={item.id} />
              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Catatan Dosen Wali (Opsional)</label>
@@ -82,8 +205,8 @@ function ApproveKrsModal({ open, onClose, item }: any) {
              </div>
              <div className="flex justify-end gap-2">
                 <Button type="button" variant="secondary" onClick={onClose}>Batal</Button>
-                <button name="status" value="Ditolak" className="px-4 py-2 rounded-xl bg-rose-50 text-rose-600 font-semibold hover:bg-rose-100 transition">Tolak</button>
-                <button name="status" value="Disetujui" className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">Setujui KRS</button>
+                <button name="status" value="Ditolak" disabled={!canProcess} className="px-4 py-2 rounded-xl bg-rose-50 text-rose-600 font-semibold hover:bg-rose-100 transition disabled:cursor-not-allowed disabled:opacity-50">Tolak</button>
+                <button name="status" value="Disetujui" disabled={!canProcess} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition disabled:cursor-not-allowed disabled:opacity-50">Setujui KRS</button>
              </div>
           </form>
        </div>
@@ -96,26 +219,34 @@ export function KrsManager({
   currentKrs, 
   user,
   tahunAkademik,
-  submissions = []
-}: any) {
+  submissions = [],
+  krsEligibility = null,
+  dosenWaliCandidates = []
+}: KrsManagerProps) {
   const [selectedJadwal, setSelectedJadwal] = useState<string[]>(
-    currentKrs?.krs_detail?.map((d: any) => d.jadwal.id) || []
+    currentKrs?.krs_detail
+      ?.map((detail) => firstRelation(detail.jadwal)?.id)
+      .filter((id): id is string => Boolean(id)) ?? []
   );
   const [search, setSearch] = useState("");
-  const [validatingItem, setValidatingItem] = useState(null);
+  const [validatingItem, setValidatingItem] = useState<KrsSubmissionItem | null>(null);
+
+  const canEditKrs = user.role !== "Mahasiswa" || Boolean(krsEligibility?.allowed);
+  const krsLockReason = krsEligibility?.reason ?? "KRS belum bisa diajukan.";
 
   const toggleJadwal = (id: string, isDisabled: boolean) => {
-    if (currentKrs?.status === "Disetujui" || isDisabled) return;
+    if (currentKrs?.status === "Disetujui" || isDisabled || !canEditKrs) return;
     setSelectedJadwal(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
 
   const totalSks = availableJadwal
-    .filter((j: any) => selectedJadwal.includes(j.id))
-    .reduce((acc: number, curr: any) => acc + (curr.mata_kuliah?.sks || 0), 0);
+    .filter((jadwal) => selectedJadwal.includes(jadwal.id))
+    .reduce((acc, curr) => acc + (curr.mata_kuliah?.sks || 0), 0);
 
   const maxSks = 24; // This could come from user data/GPA
+  const mahasiswaIdForSubmit = user.mahasiswaId ?? "";
 
   if (user.role === "Mahasiswa") {
     return (
@@ -144,6 +275,16 @@ export function KrsManager({
            </Card>
         </div>
 
+        {!canEditKrs && currentKrs?.status !== "Disetujui" && (
+           <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              <div>
+                <p className="text-sm font-bold">KRS belum bisa diajukan</p>
+                <p className="mt-1 text-sm">{krsLockReason}</p>
+              </div>
+           </div>
+        )}
+
         {totalSks > maxSks && (
            <div className="p-4 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl flex items-center gap-3">
               <AlertCircle className="h-5 w-5" />
@@ -158,11 +299,11 @@ export function KrsManager({
                 Pilih Mata Kuliah
              </h3>
              {currentKrs?.status !== "Disetujui" && (
-                <form action={submitKrsAction.bind(null, user.mahasiswaId, tahunAkademik.id)}>
+                <form action={submitKrsAction.bind(null, mahasiswaIdForSubmit, tahunAkademik.id)}>
                    {selectedJadwal.map(id => (
                      <input key={id} type="hidden" name="jadwalIds" value={id} />
                    ))}
-                   <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 shadow-lg shadow-cyan-100" disabled={totalSks > maxSks || selectedJadwal.length === 0}>
+                   <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 shadow-lg shadow-cyan-100" disabled={!mahasiswaIdForSubmit || !canEditKrs || totalSks > maxSks || selectedJadwal.length === 0}>
                       <Send className="mr-2 h-4 w-4" /> Ajukan KRS
                    </Button>
                 </form>
@@ -182,10 +323,10 @@ export function KrsManager({
                 </TR>
               </THead>
               <TBody>
-                {availableJadwal.map((item: any) => {
+                {availableJadwal.map((item) => {
                   const isSelected = selectedJadwal.includes(item.id);
                   const isFull = item.peserta >= item.kapasitas;
-                  const isDisabled = (isFull && !isSelected) || currentKrs?.status === "Disetujui";
+                  const isDisabled = !canEditKrs || (isFull && !isSelected) || currentKrs?.status === "Disetujui";
 
                   return (
                       <TR
@@ -222,6 +363,13 @@ export function KrsManager({
                       </TR>
                   )
                 })}
+                {availableJadwal.length === 0 ? (
+                  <TR>
+                    <TD colSpan={6} className="py-10 text-center text-slate-500 italic">
+                      Jadwal kuliah belum tersedia untuk tahun akademik aktif.
+                    </TD>
+                  </TR>
+                ) : null}
               </TBody>
             </Table>
           </div>
@@ -230,11 +378,17 @@ export function KrsManager({
     );
   }
 
-  // View for Admin / Dosen
-  const filteredSubmissions = submissions.filter((s: any) => 
-    s.mahasiswa?.users?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-    s.mahasiswa?.nim?.toLowerCase().includes(search.toLowerCase())
-  );
+  // View for Admin / Prodi / Dosen
+  const searchKeyword = search.trim().toLowerCase();
+  const canManageAdvisor = user.role === "Admin" || user.role === "Prodi";
+  const filteredSubmissions = submissions.filter((submission) => {
+    const mahasiswa = getSubmissionMahasiswa(submission);
+    const profile = firstRelation(mahasiswa?.users);
+    const nama = profile?.full_name?.toLowerCase() ?? "";
+    const nim = mahasiswa?.nim?.toLowerCase() ?? "";
+
+    return nama.includes(searchKeyword) || nim.includes(searchKeyword);
+  });
 
   return (
     <div className="space-y-6">
@@ -253,28 +407,44 @@ export function KrsManager({
 
        <Card className="overflow-hidden">
           <Table>
-             <THead><TR><TH>Mahasiswa</TH><TH>Program Studi</TH><TH>Total SKS</TH><TH>Status</TH><TH>Update Terakhir</TH><TH className="w-12">Aksi</TH></TR></THead>
+             <THead><TR><TH>Mahasiswa</TH><TH>Program Studi</TH><TH>Dosen Wali</TH><TH>Total SKS</TH><TH>Status</TH><TH>Update Terakhir</TH><TH className="w-12">Aksi</TH></TR></THead>
              <TBody>
                 {filteredSubmissions.length === 0 ? (
-                  <TR><TD colSpan={6} className="py-10 text-center text-slate-500 italic">Belum ada pengajuan KRS</TD></TR>
-                ) : filteredSubmissions.map((item: any) => (
-                  <TR key={item.id}>
-                    <TD><p className="font-semibold text-slate-900">{item.mahasiswa?.users?.full_name}</p><p className="text-xs text-slate-500">{item.mahasiswa?.nim}</p></TD>
-                    <TD className="text-sm">{item.mahasiswa?.program_studi?.nama}</TD>
-                    <TD className="text-sm font-bold text-slate-700">{item.total_sks} SKS</TD>
-                    <TD>
-                       <Badge variant={item.status === "Disetujui" ? "success" : item.status === "Diajukan" ? "secondary" : "destructive"}>
-                          {item.status}
-                       </Badge>
-                    </TD>
-                    <TD className="text-xs text-slate-500">{new Date(item.updated_at).toLocaleString('id-ID')}</TD>
-                    <TD>
-                       <Button variant="secondary" size="sm" className="h-8 w-8 p-0" onClick={() => setValidatingItem(item)}>
-                          <Eye className="h-4 w-4" />
-                       </Button>
-                    </TD>
-                  </TR>
-                ))}
+                  <TR><TD colSpan={7} className="py-10 text-center text-slate-500 italic">Belum ada pengajuan KRS</TD></TR>
+                ) : filteredSubmissions.map((item) => {
+                  const mahasiswa = getSubmissionMahasiswa(item);
+                  const profile = firstRelation(mahasiswa?.users);
+                  const prodi = firstRelation(mahasiswa?.program_studi);
+                  const advisorName = getAdvisorName(item);
+
+                  return (
+                    <TR key={item.id}>
+                      <TD><p className="font-semibold text-slate-900">{profile?.full_name ?? "-"}</p><p className="text-xs text-slate-500">{mahasiswa?.nim ?? "-"}</p></TD>
+                      <TD className="text-sm">{prodi?.nama ?? "-"}</TD>
+                      <TD>
+                        {canManageAdvisor ? (
+                          <AssignDosenWaliForm item={item} candidates={dosenWaliCandidates} />
+                        ) : (
+                          <span className={advisorName ? "text-sm font-medium text-slate-700" : "text-xs font-semibold text-amber-600"}>
+                            {advisorName ?? "Belum ada dosen wali"}
+                          </span>
+                        )}
+                      </TD>
+                      <TD className="text-sm font-bold text-slate-700">{item.total_sks} SKS</TD>
+                      <TD>
+                         <Badge variant={item.status === "Disetujui" ? "success" : item.status === "Diajukan" ? "secondary" : "destructive"}>
+                            {item.status}
+                         </Badge>
+                      </TD>
+                      <TD className="text-xs text-slate-500">{new Date(item.updated_at).toLocaleString('id-ID')}</TD>
+                      <TD>
+                         <Button variant="secondary" size="sm" className="h-8 w-8 p-0" onClick={() => setValidatingItem(item)}>
+                            <Eye className="h-4 w-4" />
+                         </Button>
+                      </TD>
+                    </TR>
+                  );
+                })}
              </TBody>
           </Table>
        </Card>

@@ -1,12 +1,31 @@
 import { KrsSubmissionItem } from "@/types/domain";
+import type { ComponentProps } from "react";
 import { connection } from "next/server";
 
-import { getAvailableJadwal, getStudentKrs, listKrsSubmissions } from "@/lib/admin/krs";
+import {
+  canSubmitKrs,
+  type DosenWaliCandidate,
+  getKrsEligibleJadwal,
+  getStudentKrs,
+  type JadwalRow,
+  listDosenWaliCandidates,
+  listKrsSubmissions,
+} from "@/lib/admin/krs";
 import { getDosenIdByUserId } from "@/lib/admin/dosen";
 import { createAdminClient } from "@/supabase/admin";
 import { requireAuthorizedUser } from "@/lib/auth";
 import { KrsManager } from "@/modules/krs/krs-manager";
 import { WeeklySchedule } from "@/modules/krs/weekly-schedule";
+
+type WeeklyScheduleItems = ComponentProps<typeof WeeklySchedule>["scheduleItems"];
+type WeeklyScheduleItem = WeeklyScheduleItems[number];
+type KrsDetailWithSchedule = {
+  jadwal: WeeklyScheduleItem | WeeklyScheduleItem[] | null;
+};
+
+function pickSchedule(value: KrsDetailWithSchedule["jadwal"]) {
+  return Array.isArray(value) ? value[0] ?? null : value;
+}
 
 export default async function KrsPage() {
   await connection();
@@ -29,7 +48,10 @@ export default async function KrsPage() {
 
   let mahasiswaId = null;
   let currentKrs = null;
+  let krsEligibility = null;
   let submissions: KrsSubmissionItem[] = [];
+  let availableJadwal: JadwalRow[] = [];
+  let dosenWaliCandidates: DosenWaliCandidate[] = [];
 
   // 2. Logika per Role
   if (user.role === "Mahasiswa") {
@@ -41,7 +63,11 @@ export default async function KrsPage() {
     
     if (mhs) {
       mahasiswaId = mhs.id;
-      currentKrs = await getStudentKrs(mhs.id, activeYear.id);
+      [currentKrs, krsEligibility, availableJadwal] = await Promise.all([
+        getStudentKrs(mhs.id, activeYear.id),
+        canSubmitKrs(mhs.id, activeYear.id),
+        getKrsEligibleJadwal({ mahasiswaId: mhs.id, tahunAkademikId: activeYear.id }),
+      ]);
     }
   } else if (user.role === "Dosen") {
     const dosenId = await getDosenIdByUserId(user.id);
@@ -51,19 +77,34 @@ export default async function KrsPage() {
         dosenId: dosenId 
       });
     }
+  } else if (user.role === "Prodi") {
+    const { data: prodi } = await supabase
+      .from("program_studi")
+      .select("id")
+      .eq("kaprodi_id", user.id)
+      .maybeSingle();
+
+    if (prodi?.id) {
+      submissions = await listKrsSubmissions({
+        tahunAkademikId: activeYear.id,
+        prodiId: prodi.id,
+      });
+      dosenWaliCandidates = await listDosenWaliCandidates(prodi.id);
+    }
   } else {
-    // Admin / Prodi see all
     submissions = await listKrsSubmissions({ 
-      tahunAkademikId: activeYear.id 
+      tahunAkademikId: activeYear.id,
     });
+    dosenWaliCandidates = await listDosenWaliCandidates();
   }
 
-  const availableJadwal = await getAvailableJadwal(activeYear.id);
-
   // Extract approved schedule items for the student
-  let approvedSchedules: any[] = [];
+  let approvedSchedules: WeeklyScheduleItems = [];
   if (user.role === "Mahasiswa" && currentKrs && currentKrs.status === "Disetujui") {
-      approvedSchedules = currentKrs.krs_detail?.map((d: any) => d.jadwal).filter(Boolean) || [];
+      const details = (currentKrs.krs_detail ?? []) as unknown as KrsDetailWithSchedule[];
+      approvedSchedules = details
+        .map((detail) => pickSchedule(detail.jadwal))
+        .filter((item): item is WeeklyScheduleItem => Boolean(item));
   }
 
   return (
@@ -78,6 +119,8 @@ export default async function KrsPage() {
         tahunAkademik={activeYear}
         user={{ ...user, mahasiswaId }}
         submissions={submissions}
+        krsEligibility={krsEligibility}
+        dosenWaliCandidates={dosenWaliCandidates}
       />
     </div>
   );
