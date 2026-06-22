@@ -7,7 +7,7 @@ export function EdomResults({ results }: { results?: any[] }) {
   // Aggregate basic average rating if there is data
   let totalRating = 0;
   let countRating = 0;
-  let summaryByLecturer: Record<string, { total: number, count: number, name: string }> = {};
+  const summaryByLecturer: Record<string, { total: number, count: number, name: string }> = {};
 
   if (results && results.length > 0) {
      results.forEach(res => {
