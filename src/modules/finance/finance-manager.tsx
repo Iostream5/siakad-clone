@@ -37,6 +37,7 @@ const TabLaporan = dynamic(() => import("./tabs/tab-laporan"));
 const LedgerModal = dynamic(() => import("./modals/ledger-modal"));
 const AddTagihanModal = dynamic(() => import("./modals/add-tagihan-modal"));
 const AddMasterBiayaModal = dynamic(() => import("./modals/add-master-biaya-modal"));
+const EditMasterBiayaModal = dynamic(() => import("./modals/edit-master-biaya-modal"));
 const ImportTagihanModal = dynamic(() => import("./modals/import-tagihan-modal"));
 const EditTagihanModal = dynamic(() => import("./modals/edit-tagihan-modal"));
 
@@ -232,6 +233,7 @@ export function FinanceManager({
   const [selectedTagihanIds, setSelectedTagihanIds] = useState<string[]>([]);
   const [showAddTagihan, setShowAddTagihan] = useState(false);
   const [showAddMaster, setShowAddMaster] = useState(false);
+  const [editMasterData, setEditMasterData] = useState<any | null>(null);
   const [showImportTagihan, setShowImportTagihan] = useState(false);
   const [showEditTagihan, setShowEditTagihan] = useState(false);
   const [showDeleteTagihanConfirm, setShowDeleteTagihanConfirm] = useState(false);
@@ -392,6 +394,7 @@ export function FinanceManager({
           setupData={setupData}
           onAddMaster={() => setShowAddMaster(true)}
           onBulkTagihan={setShowBulkTagihan}
+          onEditMaster={(id) => setEditMasterData(masterBiayaList.find(m => m.id === id) || null)}
           onDeleteMaster={setShowDeleteMasterConfirm}
         />
       )}
@@ -425,6 +428,14 @@ export function FinanceManager({
       <AddMasterBiayaModal
         open={showAddMaster}
         onClose={() => setShowAddMaster(false)}
+        tahunAkademikList={tahunAkademikList}
+        prodiList={prodiList}
+      />
+
+      <EditMasterBiayaModal
+        open={Boolean(editMasterData)}
+        onClose={() => setEditMasterData(null)}
+        editData={editMasterData}
         tahunAkademikList={tahunAkademikList}
         prodiList={prodiList}
       />

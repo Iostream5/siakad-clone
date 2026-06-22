@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { BadgePercent, Banknote, Calculator, CalendarDays, ChevronRight, CreditCard, Landmark, Network, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { BadgePercent, Banknote, Calculator, CalendarDays, ChevronRight, CreditCard, Landmark, Network, Pencil, Plus, ReceiptText, Trash2 } from "lucide-react";
 
 import { deleteFinanceSetupAction, saveFinanceSetupAction, setActiveAcademicYearAction } from "@/actions/finance-setup";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,7 @@ interface TabSetupProps {
   setupData: FinanceSetupData;
   onAddMaster: () => void;
   onBulkTagihan: (id: string) => void;
+  onEditMaster: (id: string) => void;
   onDeleteMaster: (id: string) => void;
 }
 
@@ -85,10 +86,10 @@ function DeleteSetupButton({ kind, id }: { kind: string; id: string }) {
   );
 }
 
-function ActiveToggle() {
+function ActiveToggle({ defaultChecked = true }: { defaultChecked?: boolean }) {
   return (
     <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-      <input type="checkbox" name="isActive" defaultChecked /> Aktif
+      <input type="checkbox" name="isActive" defaultChecked={defaultChecked} /> Aktif
     </label>
   );
 }
@@ -105,6 +106,7 @@ export default function TabSetup({
   const searchParams = useSearchParams();
   const initialSetup = (searchParams.get("setup") as SetupKey | null) || "tarif";
   const [activeSetup, setActiveSetup] = useState<SetupKey>(setupMenuItems.some((item) => item.id === initialSetup) ? initialSetup : "tarif");
+  const [editItem, setEditItem] = useState<SetupRecord | null>(null);
 
   const activeTitle = useMemo(() => setupMenuItems.find((item) => item.id === activeSetup)?.label ?? "Setup", [activeSetup]);
 
@@ -126,7 +128,12 @@ export default function TabSetup({
             ))}
             {kind ? (
               <TD className="pr-6">
-                <div className="flex justify-end"><DeleteSetupButton kind={kind} id={row.id} /></div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" size="sm" variant="ghost" className="h-8 w-8 rounded-none text-blue-500 hover:bg-blue-50" onClick={() => setEditItem(row)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <DeleteSetupButton kind={kind} id={row.id} />
+                </div>
               </TD>
             ) : null}
           </TR>
