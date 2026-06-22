@@ -353,6 +353,19 @@ export async function syncRegistrasiFromPendingTagihan(tagihanId: string) {
     return syncRegistrasiFromPaidTagihan(tagihanId);
   }
 
+  const { data: payments } = await supabase
+    .from("pembayaran")
+    .select("status, nominal")
+    .eq("tagihan_id", tagihanId)
+    .eq("status", "Terverifikasi");
+
+  const totalPaid = (payments || []).reduce((acc, p) => acc + Number(p.nominal), 0);
+
+  if (totalPaid > 0) {
+    // If there's any verified payment (e.g. installment), grant "LUNAS" status for KRS
+    return syncRegistrasiFromPaidTagihan(tagihanId);
+  }
+
   const current = await getExistingRegistrasiForBill(supabase, bill);
   if (isFinalRegistrasiStatus(current?.status)) {
     return {

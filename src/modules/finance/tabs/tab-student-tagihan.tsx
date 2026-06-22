@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
@@ -74,6 +74,7 @@ export default function TabStudentTagihan({ ledger }: TabStudentTagihanProps) {
   const [query, setQuery] = useState("");
   const [selectedBillId, setSelectedBillId] = useState<string | null>(initialBillId);
   const [isPaying, setIsPaying] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState<number | "">("");
   const { error } = useToast();
 
   const bills = ledger?.tagihan ?? [];
@@ -91,12 +92,22 @@ export default function TabStudentTagihan({ ledger }: TabStudentTagihanProps) {
       ))
     : bills;
 
+  useEffect(() => {
+    if (selectedBill) {
+      // Avoid setting state here directly if it causes issues, but for now we set it to default
+    }
+  }, [selectedBill]);
+
   const handlePay = async () => {
     if (!selectedBill || !canPayBill(selectedBill)) return;
+    if (!paymentAmount || paymentAmount <= 0 || paymentAmount > selectedBill.remaining) {
+      error("Gagal membuat pembayaran", "Nominal pembayaran tidak valid.");
+      return;
+    }
 
     setIsPaying(true);
     try {
-      const result = await requestFinancePaymentGatewayAction(selectedBill.id);
+      const result = await requestFinancePaymentGatewayAction(selectedBill.id, Number(paymentAmount));
       if (result.success && result.checkoutUrl) {
         window.location.assign(result.checkoutUrl);
         return;
@@ -265,6 +276,21 @@ export default function TabStudentTagihan({ ledger }: TabStudentTagihanProps) {
                       <p className="text-xs font-medium text-slate-500">Sistem akan membuka halaman checkout pembayaran.</p>
                     </div>
                   </div>
+
+                  {canPayBill(selectedBill) && (
+                    <div className="flex flex-col md:flex-row items-center gap-3">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={selectedBill.remaining}
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value ? Number(e.target.value) : "")}
+                        placeholder="Nominal"
+                        className="w-full md:w-32 h-10"
+                      />
+                    </div>
+                  )}
+
                   <Button
                     type="button"
                     disabled={!canPayBill(selectedBill) || isPaying}
