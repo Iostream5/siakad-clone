@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
@@ -22,6 +23,8 @@ export function DashboardShell({
   notificationPreview: NotificationPreviewData;
   children: ReactNode;
 }) {
+  const pathname = usePathname();
+  const isForumDetail = pathname?.includes("/forum/");
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -73,17 +76,19 @@ export function DashboardShell({
 
         {/* Main Content Area */}
         <main className="flex-1 pt-16">
-          <div className="p-4 md:p-8">
-            <div className="mx-auto w-full space-y-6">
+          <div className={isForumDetail ? '' : 'p-4 md:p-8'}>
+            <div className={isForumDetail ? '' : 'mx-auto w-full space-y-6'}>
               <PageTransition>
                 {children}
               </PageTransition>
             </div>
           </div>
           
-          <div className="px-4 py-6 md:px-8">
-            <Footer />
-          </div>
+          {!isForumDetail && (
+            <div className="px-4 py-6 md:px-8">
+              <Footer />
+            </div>
+          )}
         </main>
       </div>
     </div>

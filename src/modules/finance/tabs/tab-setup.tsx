@@ -101,6 +101,7 @@ export default function TabSetup({
   setupData,
   onAddMaster,
   onBulkTagihan,
+  onEditMaster,
   onDeleteMaster,
 }: TabSetupProps) {
   const searchParams = useSearchParams();
@@ -219,7 +220,7 @@ export default function TabSetup({
                       <TD className="text-[10px] font-black text-slate-900">{mb.nama}</TD>
                       <TD className="whitespace-nowrap font-mono text-[11px] font-black text-slate-900">{formatCurrency(Number(mb.nominal))}</TD>
                       <TD><Badge variant={mb.status ? "success" : "secondary"} className="h-5 rounded-none px-2 text-[8px] font-black uppercase">{mb.status ? "Aktif" : "Nonaktif"}</Badge></TD>
-                      <TD className="pr-6"><div className="flex justify-end gap-2"><Button size="sm" variant="ghost" className="h-8 w-8 rounded-none text-emerald-600 hover:bg-emerald-50" onClick={() => onBulkTagihan(mb.id)}><Plus className="h-4 w-4" /></Button><Button size="sm" variant="ghost" className="h-8 w-8 rounded-none text-rose-500 hover:bg-rose-50" onClick={() => onDeleteMaster(mb.id)}><Trash2 className="h-4 w-4" /></Button></div></TD>
+                      <TD className="pr-6"><div className="flex justify-end gap-2"><Button size="sm" variant="ghost" className="h-8 w-8 rounded-none text-blue-500 hover:bg-blue-50" onClick={() => onEditMaster(mb.id)}><Pencil className="h-4 w-4" /></Button><Button size="sm" variant="ghost" className="h-8 w-8 rounded-none text-emerald-600 hover:bg-emerald-50" onClick={() => onBulkTagihan(mb.id)}><Plus className="h-4 w-4" /></Button><Button size="sm" variant="ghost" className="h-8 w-8 rounded-none text-rose-500 hover:bg-rose-50" onClick={() => onDeleteMaster(mb.id)}><Trash2 className="h-4 w-4" /></Button></div></TD>
                     </TR>
                   ))}
                 </TBody>

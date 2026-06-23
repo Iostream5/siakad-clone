@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Pencil, Search, Trash2, X, Users } from "lucide-react";
+import { KeyRound, Pencil, Search, Trash2, X, Users } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { deleteUserAction, updateUserAction } from "@/actions/users";
+import { deleteUserAction, resetUserPasswordAction, updateUserAction } from "@/actions/users";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -106,6 +106,31 @@ function UserFormModal({ open, onClose, item }: { open: boolean, onClose: () => 
   );
 }
 
+function ResetPasswordModal({ open, onClose, item }: { open: boolean, onClose: () => void, item: UserItem | null }) {
+  const router = useRouter();
+  const [state, formAction] = useActionState(resetUserPasswordAction as any, initialState);
+  useActionToast(state, "Password berhasil direset ke default");
+  useEffect(() => { if (state?.success) { onClose(); router.refresh(); } }, [onClose, router, state?.success]);
+  if (!item) return null;
+  return (
+    <ModalShell open={open} onClose={onClose} title="Reset Password" description="Setel ulang kata sandi ke default">
+      <form action={formAction} className="space-y-5">
+        <input type="hidden" name="id" value={item.id} />
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm text-amber-900">Reset password untuk akun berikut?</p>
+          <h4 className="mt-2 text-lg font-semibold text-slate-950">{item.full_name}</h4>
+          <p className="mt-1 text-sm text-slate-600">{item.email}</p>
+          <p className="mt-2 text-xs font-bold uppercase tracking-widest text-amber-700">Password baru: stai12345</p>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>Batal</Button>
+          <Button type="submit" className="bg-amber-600 hover:bg-amber-700 text-white">Reset Password</Button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
 function DeleteUserModal({ open, onClose, item }: { open: boolean, onClose: () => void, item: UserItem | null }) {
   const router = useRouter();
   const [state, formAction] = useActionState(deleteUserAction as any, initialState);
@@ -140,6 +165,7 @@ export function UserManager({ items, totalItems, totalPages, currentPage, query 
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<UserItem | null>(null);
   const [deletingItem, setDeletingItem] = useState<UserItem | null>(null);
+  const [resettingItem, setResettingItem] = useState<UserItem | null>(null);
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -184,6 +210,7 @@ export function UserManager({ items, totalItems, totalPages, currentPage, query 
                   <TD>
                     <div className="flex gap-2">
                       <Button variant="secondary" size="sm" onClick={() => { setEditingItem(item); setFormOpen(true); }} className="h-9 w-9 p-0"><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => setResettingItem(item)} className="h-9 w-9 p-0 text-amber-600 hover:bg-amber-50"><KeyRound className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="sm" onClick={() => setDeletingItem(item)} className="h-9 w-9 p-0 text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /></Button>
                     </div>
                   </TD>
@@ -201,6 +228,7 @@ export function UserManager({ items, totalItems, totalPages, currentPage, query 
         </div>
       </Card>
       <UserFormModal open={formOpen} onClose={() => setFormOpen(false)} item={editingItem} />
+      <ResetPasswordModal open={Boolean(resettingItem)} onClose={() => setResettingItem(null)} item={resettingItem} />
       <DeleteUserModal open={Boolean(deletingItem)} onClose={() => setDeletingItem(null)} item={deletingItem} />
     </div>
   );

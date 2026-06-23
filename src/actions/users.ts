@@ -7,8 +7,9 @@ import { createAdminClient } from "@/supabase/admin";
 import { withToastParams } from "@/lib/toast-query";
 import { logActivity } from "@/lib/admin/audit-logger";
 import { requireAuthorizedUser } from "@/lib/auth";
+import { createClient } from "@/supabase/server";
 
-export async function updateUserAction(formData: FormData) {
+export async function updateUserAction(prevState: any, formData: FormData) {
   await requireAuthorizedUser("master-data.pengguna", ["Admin"]);
 
   const id = formData.get("id")?.toString();
@@ -54,7 +55,7 @@ export async function updateUserAction(formData: FormData) {
   redirect(withToastParams("/dashboard/master-data/pengguna", { variant: "success", title: "Berhasil diperbarui" }));
 }
 
-export async function deleteUserAction(formData: FormData) {
+export async function deleteUserAction(prevState: any, formData: FormData) {
   await requireAuthorizedUser("master-data.pengguna", ["Admin"]);
 
   const id = formData.get("id")?.toString();
@@ -88,4 +89,35 @@ export async function deleteUserAction(formData: FormData) {
 
   revalidatePath("/dashboard/master-data/pengguna");
   redirect(withToastParams("/dashboard/master-data/pengguna", { variant: "success", title: "Berhasil dihapus" }));
+}
+
+export async function resetUserPasswordAction(prevState: any, formData: FormData) {
+  await requireAuthorizedUser("master-data.pengguna", ["Admin"]);
+
+  const id = formData.get("id")?.toString();
+  if (!id) redirect(withToastParams("/dashboard/master-data/pengguna", { variant: "error", title: "ID tidak valid" }));
+
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Client error");
+
+  const newPassword = "stai12345";
+
+  const { error } = await supabase.auth.admin.updateUserById(id, {
+    password: newPassword,
+  });
+
+  if (error) {
+    redirect(withToastParams("/dashboard/master-data/pengguna", { variant: "error", title: "Gagal reset password", message: error.message }));
+  }
+
+  await logActivity({
+    modul: "Master Pengguna",
+    aksi: "RESET_PASSWORD",
+    tableName: "users",
+    recordId: id,
+    newData: { password_reset: true },
+  });
+
+  revalidatePath("/dashboard/master-data/pengguna");
+  redirect(withToastParams("/dashboard/master-data/pengguna", { variant: "success", title: "Password berhasil direset ke default" }));
 }
