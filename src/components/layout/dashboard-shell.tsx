@@ -38,7 +38,7 @@ export function DashboardShell({
   }
 
   return (
-    <div className="relative flex min-h-screen">
+    <div className="relative flex min-h-screen overflow-x-hidden">
       <div className="dashboard-bg-overlay" />
       {mobileSidebarOpen ? (
         <button
@@ -59,13 +59,13 @@ export function DashboardShell({
       />
 
       <div 
-        className={`flex min-h-screen min-w-0 flex-1 flex-col transition-[padding-left] duration-300 ${
+        className={`flex min-h-screen min-w-0 flex-1 flex-col overflow-x-hidden transition-[padding-left] duration-300 ${
           sidebarCollapsed ? "lg:pl-[5.25rem]" : "lg:pl-[17rem]"
         }`}
       >
         {/* Fixed Topbar Container */}
         <header
-            className={`fixed top-0 right-0 left-0 z-30 flex h-16 min-w-0 items-center border-b border-slate-200 bg-white/80 backdrop-blur-md transition-[left] duration-300 ${
+            className={`fixed top-0 right-0 left-0 z-30 flex h-14 sm:h-16 min-w-0 items-center border-b border-slate-200 bg-white/80 backdrop-blur-md transition-[left] duration-300 ${
             sidebarCollapsed ? "lg:left-[5.25rem]" : "lg:left-[17rem]"
           }`}
         >
@@ -75,9 +75,9 @@ export function DashboardShell({
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 pt-16">
-          <div className={isForumDetail ? '' : 'p-4 md:p-8'}>
-            <div className={isForumDetail ? '' : 'mx-auto w-full space-y-6'}>
+        <main className="flex-1 pt-14 sm:pt-16">
+          <div className={isForumDetail ? '' : 'p-3 sm:p-4 md:p-6 lg:p-8'}>
+            <div className={isForumDetail ? '' : 'mx-auto w-full space-y-4 sm:space-y-6'}>
               <PageTransition>
                 {children}
               </PageTransition>
@@ -85,7 +85,7 @@ export function DashboardShell({
           </div>
           
           {!isForumDetail && (
-            <div className="px-4 py-6 md:px-8">
+            <div className="px-3 py-4 sm:px-4 sm:py-6 md:px-8">
               <Footer />
             </div>
           )}

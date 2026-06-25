@@ -41,7 +41,7 @@ export default function ImportTagihanModal({ open, onClose }: ImportTagihanModal
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">CSV atau XLSX, diparse server-side lalu file dibuang.</p>
             </div>
           </div>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose} className="h-9 w-9 rounded-none text-slate-400">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} className="h-11 w-11 sm:h-9 sm:w-9 rounded-none text-slate-400">
             <X className="h-4 w-4" />
           </Button>
         </div>

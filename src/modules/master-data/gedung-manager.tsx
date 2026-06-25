@@ -75,7 +75,7 @@ function ModalShell({ open, title, description, onClose, children }: { open: boo
             <p className="text-sm text-slate-500">{description}</p>
             <h3 className="mt-1 text-xl font-semibold text-slate-950">{title}</h3>
           </div>
-          <button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900">
+          <button type="button" onClick={onClose} className="inline-flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -333,17 +333,17 @@ export function GedungManager({ items, totalItems, totalPages, currentPage, quer
                       <div className="flex gap-2">
                         <form action={restoreAction}>
                           <input type="hidden" name="id" value={item.id} />
-                          <Button type="submit" variant="secondary" size="sm" className="h-9 w-9 p-0"><RotateCcw className="h-3.5 w-3.5" /></Button>
+                          <Button type="submit" variant="secondary" size="sm" className="h-11 w-11 sm:h-9 sm:w-9 p-0"><RotateCcw className="h-3.5 w-3.5" /></Button>
                         </form>
                         <form action={hardDeleteAction}>
                           <input type="hidden" name="id" value={item.id} />
-                          <Button type="submit" size="sm" className="h-9 w-9 p-0 bg-rose-600 hover:bg-rose-700 text-white"><Trash2 className="h-3.5 w-3.5" /></Button>
+                          <Button type="submit" size="sm" className="h-11 w-11 sm:h-9 sm:w-9 p-0 bg-rose-600 hover:bg-rose-700 text-white"><Trash2 className="h-3.5 w-3.5" /></Button>
                         </form>
                       </div>
                     ) : (
                       <div className="flex gap-2">
-                        <Button variant="secondary" size="sm" onClick={() => { setEditingItem(item); setFormOpen(true); }} className="h-9 w-9 p-0"><Pencil className="h-3.5 w-3.5" /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDeletingItem(item)} className="h-9 w-9 p-0 text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /></Button>
+                        <Button variant="secondary" size="sm" onClick={() => { setEditingItem(item); setFormOpen(true); }} className="h-11 w-11 sm:h-9 sm:w-9 p-0"><Pencil className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDeletingItem(item)} className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     )}
                   </TD>

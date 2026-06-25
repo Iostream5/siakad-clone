@@ -91,7 +91,7 @@ export async function deleteUserAction(prevState: any, formData: FormData) {
   redirect(withToastParams("/dashboard/master-data/pengguna", { variant: "success", title: "Berhasil dihapus" }));
 }
 
-export async function resetUserPasswordAction(prevState: any, formData: FormData) {
+export async function resetUserPasswordAction(formData: FormData) {
   await requireAuthorizedUser("master-data.pengguna", ["Admin"]);
 
   const id = formData.get("id")?.toString();
@@ -112,7 +112,7 @@ export async function resetUserPasswordAction(prevState: any, formData: FormData
 
   await logActivity({
     modul: "Master Pengguna",
-    aksi: "RESET_PASSWORD",
+    aksi: "UPDATE",
     tableName: "users",
     recordId: id,
     newData: { password_reset: true },

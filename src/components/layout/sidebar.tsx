@@ -40,6 +40,7 @@ import {
   Wrench,
   CreditCard,
   Menu,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -156,9 +157,9 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex shrink-0 flex-col justify-between overflow-visible border-r border-slate-800/80 bg-[linear-gradient(180deg,#202333_0%,#232738_42%,#1f2432_100%)] p-4 text-white shadow-[0_18px_40px_rgba(15,23,42,0.28)] transition-[transform,width,padding] duration-300 lg:translate-x-0",
+        "fixed inset-y-0 left-0 z-40 flex shrink-0 flex-col justify-between overflow-visible border-r border-slate-800/80 bg-[linear-gradient(180deg,#202333_0%,#232738_42%,#1f2432_100%)] p-3 sm:p-4 text-white shadow-[0_18px_40px_rgba(15,23,42,0.28)] transition-[transform,width,padding] duration-300 lg:translate-x-0 safe-area-top safe-area-bottom",
         mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-        collapsed ? "w-[5.25rem]" : "w-[17rem]",
+        collapsed ? "w-[5.25rem]" : "w-[80vw] max-w-[17rem] sm:w-[17rem]",
       )}
     >
       <button
@@ -173,27 +174,38 @@ export function Sidebar({
         {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
       </button>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-5">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 sm:gap-5">
         <div className="shrink-0">
           <div className={cn("flex items-center", collapsed ? "justify-center" : "gap-3")}>
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl border border-white/12 bg-white/95 shadow-[0_10px_25px_rgba(15,23,42,0.22)]">
               <Image src="/logostai.png" alt="Logo STAI" width={40} height={40} className="h-8 w-8 object-contain" />
             </div>
             {!collapsed ? (
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-200/70">SIAKAD STAI</p>
                 <h1 className="mt-1 text-[1.05rem] font-semibold">Menu Kampus</h1>
               </div>
             ) : null}
+            {/* Mobile close button */}
+            {!collapsed ? (
+              <button
+                type="button"
+                aria-label="Tutup menu"
+                onClick={onCloseMobile}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/8 text-slate-300 hover:bg-white/15 hover:text-white transition lg:hidden"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
           </div>
           {!collapsed ? (
-            <p className="mt-3 text-[0.78rem] leading-6 text-slate-300">
+            <p className="mt-3 text-[0.78rem] leading-6 text-slate-300 hidden sm:block">
               Pola menu dibuat lebih dekat ke SIAKAD lama, tetapi tetap rapi dan modern.
             </p>
           ) : null}
         </div>
 
-        <nav className="sidebar-scroll min-h-0 flex-1 overflow-y-auto pr-1 pt-14">
+        <nav className="sidebar-scroll min-h-0 flex-1 overflow-y-auto pr-1 pt-6 sm:pt-14">
           <div className="space-y-2.5">
           {!collapsed ? <p className="px-2 text-[11px] uppercase tracking-[0.22em] text-slate-400">Menu Utama</p> : null}
           {items.map((item) => {
@@ -234,7 +246,7 @@ export function Sidebar({
                     onClick={onCloseMobile}
                     className={cn(
                       "group flex items-center rounded-2xl border transition",
-                      collapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-2.5 text-[0.84rem]",
+                      collapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-3 sm:py-2.5 text-[0.84rem]",
                       active
                         ? "border-white/16 bg-[linear-gradient(135deg,rgba(255,255,255,0.16),rgba(255,255,255,0.08))] text-white shadow-[0_14px_30px_rgba(15,23,42,0.2)] backdrop-blur"
                         : "border-transparent bg-white/3 text-slate-200 hover:border-white/10 hover:bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] hover:text-white hover:backdrop-blur",

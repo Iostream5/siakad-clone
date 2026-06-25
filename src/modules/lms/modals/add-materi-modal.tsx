@@ -70,7 +70,7 @@ export function AddMateriModal({ isOpen, onClose, jadwalId, editItem }: AddMater
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4 py-4">
           <input type="hidden" name="jadwalId" value={jadwalId} />
-          {isEditMode && <input type="hidden" name="materiId" value={editItem.id} />}
+          {editItem ? <input type="hidden" name="materiId" value={editItem?.id} /> : null}
           
           <div className="space-y-2">
             <Label htmlFor="judul" className="text-[10px] font-black uppercase tracking-widest text-slate-500">Judul Materi</Label>

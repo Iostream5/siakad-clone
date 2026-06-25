@@ -51,7 +51,7 @@ export default function EditTagihanModal({ open, bill, mahasiswaList, tahunAkade
               Jika sudah ada pembayaran, sistem hanya menerima perubahan jatuh tempo atau dispensasi.
             </p>
           </div>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose} className="h-9 w-9 rounded-none text-slate-400">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} className="h-11 w-11 sm:h-9 sm:w-9 rounded-none text-slate-400">
             <X className="h-4 w-4" />
           </Button>
         </div>

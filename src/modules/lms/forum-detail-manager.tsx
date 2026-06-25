@@ -2,9 +2,9 @@
 
 import { useState, useTransition, useEffect, useRef } from "react";
 import type { SVGProps } from "react";
-import { 
-  ArrowLeft, 
-  Send, 
+import {
+  ArrowLeft,
+  Send,
   MoreVertical,
   Pencil,
   Trash2,
@@ -100,13 +100,13 @@ export function ForumDetailManager({ user, topik, initialKomentar }: ForumDetail
   }
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)] w-full bg-slate-50/80 animate-in fade-in duration-700 relative">
-      
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] w-full bg-slate-50/80 animate-in fade-in duration-700 relative overflow-hidden">
+
       {/* Chat Header */}
-      <div className="bg-white/90 backdrop-blur-md border-b border-slate-200 p-3 sm:p-4 px-4 sm:px-6 flex items-center justify-between z-20 sticky top-16 shadow-sm">
+      <div className="bg-white/90 backdrop-blur-md border-b border-slate-200 p-3 sm:p-4 px-4 sm:px-6 flex items-center justify-between z-20 shadow-sm shrink-0">
         <div className="flex items-center gap-3 sm:gap-4">
           <Link href={`/dashboard/akademik/lms/${topik.jadwal_id}`}>
-            <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-500 hover:bg-slate-100 rounded-full shrink-0">
+            <Button variant="ghost" size="sm" className="h-10 w-10 text-slate-500 hover:bg-slate-100 rounded-full shrink-0">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
@@ -122,13 +122,13 @@ export function ForumDetailManager({ user, topik, initialKomentar }: ForumDetail
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {topik.is_pinned && <Badge className="bg-amber-50 text-amber-700 border-amber-200 font-black text-[9px] uppercase tracking-widest hidden sm:inline-flex"><Pin className="h-3 w-3 mr-1" /> Pinned</Badge>}
           {canEditTopic && !isEditingTopic && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-600 rounded-full shrink-0">
+                <Button variant="ghost" size="sm" className="h-10 w-10 text-slate-400 hover:text-slate-600 rounded-full shrink-0">
                   <MoreVertical className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
@@ -136,7 +136,7 @@ export function ForumDetailManager({ user, topik, initialKomentar }: ForumDetail
                 <DropdownMenuItem onClick={() => setIsEditingTopic(true)} className="text-slate-700 cursor-pointer">
                   <Pencil className="h-4 w-4 mr-2" /> Edit Topik
                 </DropdownMenuItem>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={async () => {
                     if (!confirm("Apakah Anda yakin ingin menghapus topik ini?")) return;
                     const formData = new FormData();
@@ -151,7 +151,7 @@ export function ForumDetailManager({ user, topik, initialKomentar }: ForumDetail
                         error(result.error || "Gagal menghapus topik");
                       }
                     });
-                  }} 
+                  }}
                   className="text-rose-600 cursor-pointer"
                 >
                   <Trash2 className="h-4 w-4 mr-2" /> Hapus Topik
@@ -163,92 +163,92 @@ export function ForumDetailManager({ user, topik, initialKomentar }: ForumDetail
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 p-4 sm:p-6 space-y-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed pb-8">
-        
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed pb-8">
+
         {/* Topic as Pinned/First Message */}
         <div className="flex justify-center mb-8 mt-2">
           <div className="bg-white/90 backdrop-blur-sm border border-slate-200 rounded-2xl p-5 sm:p-6 max-w-3xl w-full shadow-sm">
             {isEditingTopic ? (
-               <div className="space-y-3">
-                 <input
-                   type="text"
-                   value={editedTitle}
-                   onChange={(e) => setEditedTitle(e.target.value)}
-                   className="w-full text-lg font-black text-slate-900 uppercase tracking-tight border-b-2 border-indigo-500 focus:outline-none pb-1 bg-transparent"
-                   placeholder="Judul topik"
-                 />
-                 <textarea
-                   value={editedContent}
-                   onChange={(e) => setEditedContent(e.target.value)}
-                   className="w-full text-slate-600 font-medium border-b-2 border-indigo-500 focus:outline-none pb-2 resize-none bg-transparent"
-                   rows={3}
-                   placeholder="Isi diskusi"
-                 />
-                 <input
-                   type="url"
-                   value={editedTopicFileUrl}
-                   onChange={(e) => setEditedTopicFileUrl(e.target.value)}
-                   className="w-full text-xs font-medium text-slate-600 border-b-2 border-slate-300 focus:border-indigo-500 focus:outline-none pb-1 bg-transparent"
-                   placeholder="Lampiran URL (opsional)"
-                 />
-                 <div className="flex gap-2 pt-2 justify-end">
-                   <Button
-                     onClick={async () => {
-                       const formData = new FormData();
-                       formData.append("topikId", topik.id);
-                       formData.append("jadwalId", topik.jadwal_id);
-                       formData.append("judul", editedTitle);
-                       formData.append("konten", editedContent);
-                       if (editedTopicFileUrl) formData.append("fileUrl", editedTopicFileUrl);
-                       startTransition(async () => {
-                         const result = await updateLmsForumTopikAction(formData);
-                         if (result.success) {
-                           success("Topik berhasil diperbarui");
-                           setIsEditingTopic(false);
-                           router.refresh();
-                         } else {
-                           error(result.error || "Gagal memperbarui topik");
-                         }
-                       });
-                     }}
-                     disabled={isPending}
-                     className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest h-8 px-4 rounded-lg"
-                   >
-                     Simpan
-                   </Button>
-                   <Button
-                     onClick={() => {
-                       setIsEditingTopic(false);
-                       setEditedTitle(topik.judul);
-                       setEditedContent(topik.konten);
-                       setEditedTopicFileUrl(topik.file_url || "");
-                     }}
-                     variant="ghost"
-                     className="font-bold text-[10px] uppercase tracking-widest h-8 px-4 rounded-lg"
-                   >
-                     Batal
-                   </Button>
-                 </div>
-               </div>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  className="w-full text-lg font-black text-slate-900 uppercase tracking-tight border-b-2 border-indigo-500 focus:outline-none pb-1 bg-transparent"
+                  placeholder="Judul topik"
+                />
+                <textarea
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  className="w-full text-slate-600 font-medium border-b-2 border-indigo-500 focus:outline-none pb-2 resize-none bg-transparent"
+                  rows={3}
+                  placeholder="Isi diskusi"
+                />
+                <input
+                  type="url"
+                  value={editedTopicFileUrl}
+                  onChange={(e) => setEditedTopicFileUrl(e.target.value)}
+                  className="w-full text-xs font-medium text-slate-600 border-b-2 border-slate-300 focus:border-indigo-500 focus:outline-none pb-1 bg-transparent"
+                  placeholder="Lampiran URL (opsional)"
+                />
+                <div className="flex gap-2 pt-2 justify-end">
+                  <Button
+                    onClick={async () => {
+                      const formData = new FormData();
+                      formData.append("topikId", topik.id);
+                      formData.append("jadwalId", topik.jadwal_id);
+                      formData.append("judul", editedTitle);
+                      formData.append("konten", editedContent);
+                      if (editedTopicFileUrl) formData.append("fileUrl", editedTopicFileUrl);
+                      startTransition(async () => {
+                        const result = await updateLmsForumTopikAction(formData);
+                        if (result.success) {
+                          success("Topik berhasil diperbarui");
+                          setIsEditingTopic(false);
+                          router.refresh();
+                        } else {
+                          error(result.error || "Gagal memperbarui topik");
+                        }
+                      });
+                    }}
+                    disabled={isPending}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest h-8 px-4 rounded-lg"
+                  >
+                    Simpan
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setIsEditingTopic(false);
+                      setEditedTitle(topik.judul);
+                      setEditedContent(topik.konten);
+                      setEditedTopicFileUrl(topik.file_url || "");
+                    }}
+                    variant="ghost"
+                    className="font-bold text-[10px] uppercase tracking-widest h-8 px-4 rounded-lg"
+                  >
+                    Batal
+                  </Button>
+                </div>
+              </div>
             ) : (
-               <>
-                 <div className="flex items-center gap-2 mb-3 justify-center">
-                    <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100 font-black text-[9px] uppercase tracking-widest px-2">Topik Diskusi</Badge>
-                 </div>
-                 <h2 className="text-base sm:text-lg font-black text-slate-900 text-center uppercase tracking-tight mb-2">{topik.judul}</h2>
-                 <p className="text-slate-700 font-medium whitespace-pre-wrap text-center text-sm">{topik.konten}</p>
-                 {topik.file_url && (
-                   <div className="mt-4 flex justify-center">
-                     <a href={topik.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-indigo-100 transition-colors">
-                       <Pin className="h-3.5 w-3.5" /> Lihat Lampiran
-                     </a>
-                   </div>
-                 )}
-                 <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                   <span>Oleh {topik.users?.full_name} ({topik.users?.role})</span>
-                   <span>{new Date(topik.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                 </div>
-               </>
+              <>
+                <div className="flex items-center gap-2 mb-3 justify-center">
+                  <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100 font-black text-[9px] uppercase tracking-widest px-2">Topik Diskusi</Badge>
+                </div>
+                <h2 className="text-base sm:text-lg font-black text-slate-900 text-center uppercase tracking-tight mb-2">{topik.judul}</h2>
+                <p className="text-slate-700 font-medium whitespace-pre-wrap text-center text-sm">{topik.konten}</p>
+                {topik.file_url && (
+                  <div className="mt-4 flex justify-center">
+                    <a href={topik.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-indigo-100 transition-colors">
+                      <Pin className="h-3.5 w-3.5" /> Lihat Lampiran
+                    </a>
+                  </div>
+                )}
+                <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                  <span>Oleh {topik.users?.full_name} ({topik.users?.role})</span>
+                  <span>{new Date(topik.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -269,12 +269,12 @@ export function ForumDetailManager({ user, topik, initialKomentar }: ForumDetail
             return (
               <div key={item.id} className={cn("flex w-full group", isMe ? "justify-end" : "justify-start")}>
                 <div className={cn("flex max-w-[90%] sm:max-w-[75%] md:max-w-[65%] relative gap-2", isMe ? "flex-row-reverse" : "flex-row")}>
-                  
+
                   {/* Bubble */}
                   <div className={cn(
                     "relative p-3 sm:p-4 shadow-sm",
-                    isMe 
-                      ? "bg-indigo-600 text-white rounded-2xl rounded-tr-sm" 
+                    isMe
+                      ? "bg-indigo-600 text-white rounded-2xl rounded-tr-sm"
                       : "bg-white border border-slate-200 text-slate-700 rounded-2xl rounded-tl-sm"
                   )}>
                     {/* Sender Name for Others */}
@@ -291,58 +291,58 @@ export function ForumDetailManager({ user, topik, initialKomentar }: ForumDetail
 
                     {/* Edit Comment Area vs Display Content */}
                     {!isDeleted && editingCommentId === item.id ? (
-                       <div className="space-y-2">
-                         <Textarea
-                           value={editedCommentContent}
-                           onChange={(e) => setEditedCommentContent(e.target.value)}
-                           className={cn("text-sm font-medium border-0 focus:ring-0 resize-none min-h-[60px] p-0 w-full bg-transparent", isMe ? "text-white placeholder:text-indigo-200" : "text-slate-700")}
-                           placeholder="Edit komentar..."
-                         />
-                         <input
-                           type="url"
-                           value={editedCommentFileUrl}
-                           onChange={(e) => setEditedCommentFileUrl(e.target.value)}
-                           className={cn("w-full text-xs font-medium border-b focus:outline-none pb-1 bg-transparent", isMe ? "text-white border-indigo-400 focus:border-white placeholder:text-indigo-200" : "text-slate-600 border-slate-300 focus:border-indigo-500")}
-                           placeholder="Lampiran URL (opsional)"
-                         />
-                         <div className="flex gap-2 justify-end">
-                           <Button
-                             onClick={async () => {
-                               if (!editedCommentContent.trim()) return;
-                               const formData = new FormData();
-                               formData.append("komentarId", item.id);
-                               formData.append("konten", editedCommentContent);
-                               if (editedCommentFileUrl) formData.append("fileUrl", editedCommentFileUrl);
-                               startTransition(async () => {
-                                 const result = await updateLmsForumKomentarAction(formData);
-                                 if (result.success) {
-                                   success("Komentar berhasil diperbarui");
-                                   setEditingCommentId(null);
-                                   router.refresh();
-                                 } else {
-                                   error(result.error || "Gagal memperbarui komentar");
-                                 }
-                               });
-                             }}
-                             disabled={isPending}
-                             variant="secondary"
-                             className="h-7 text-[10px] px-3 rounded-lg font-black uppercase tracking-widest"
-                           >
-                             Simpan
-                           </Button>
-                           <Button
-                             onClick={() => {
-                               setEditingCommentId(null);
-                               setEditedCommentContent("");
-                               setEditedCommentFileUrl("");
-                             }}
-                             variant="ghost"
-                             className={cn("h-7 text-[10px] px-3 rounded-lg font-bold uppercase tracking-widest", isMe ? "text-white hover:bg-indigo-500" : "")}
-                           >
-                             Batal
-                           </Button>
-                         </div>
-                       </div>
+                      <div className="space-y-2">
+                        <Textarea
+                          value={editedCommentContent}
+                          onChange={(e) => setEditedCommentContent(e.target.value)}
+                          className={cn("text-sm font-medium border-0 focus:ring-0 resize-none min-h-[60px] p-0 w-full bg-transparent", isMe ? "text-white placeholder:text-indigo-200" : "text-slate-700")}
+                          placeholder="Edit komentar..."
+                        />
+                        <input
+                          type="url"
+                          value={editedCommentFileUrl}
+                          onChange={(e) => setEditedCommentFileUrl(e.target.value)}
+                          className={cn("w-full text-xs font-medium border-b focus:outline-none pb-1 bg-transparent", isMe ? "text-white border-indigo-400 focus:border-white placeholder:text-indigo-200" : "text-slate-600 border-slate-300 focus:border-indigo-500")}
+                          placeholder="Lampiran URL (opsional)"
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            onClick={async () => {
+                              if (!editedCommentContent.trim()) return;
+                              const formData = new FormData();
+                              formData.append("komentarId", item.id);
+                              formData.append("konten", editedCommentContent);
+                              if (editedCommentFileUrl) formData.append("fileUrl", editedCommentFileUrl);
+                              startTransition(async () => {
+                                const result = await updateLmsForumKomentarAction(formData);
+                                if (result.success) {
+                                  success("Komentar berhasil diperbarui");
+                                  setEditingCommentId(null);
+                                  router.refresh();
+                                } else {
+                                  error(result.error || "Gagal memperbarui komentar");
+                                }
+                              });
+                            }}
+                            disabled={isPending}
+                            variant="secondary"
+                            className="h-7 text-[10px] px-3 rounded-lg font-black uppercase tracking-widest"
+                          >
+                            Simpan
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setEditingCommentId(null);
+                              setEditedCommentContent("");
+                              setEditedCommentFileUrl("");
+                            }}
+                            variant="ghost"
+                            className={cn("h-7 text-[10px] px-3 rounded-lg font-bold uppercase tracking-widest", isMe ? "text-white hover:bg-indigo-500" : "")}
+                          >
+                            Batal
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
                       <div className={cn("text-sm leading-relaxed whitespace-pre-wrap font-medium break-words", isDeleted && "italic opacity-70")}>
                         {item.konten}
@@ -368,16 +368,16 @@ export function ForumDetailManager({ user, topik, initialKomentar }: ForumDetail
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align={isMe ? "end" : "start"} className="rounded-xl border-slate-200">
                             {isMe && (
-                              <DropdownMenuItem onClick={() => { 
-                                setEditingCommentId(item.id); 
-                                setEditedCommentContent(item.konten); 
+                              <DropdownMenuItem onClick={() => {
+                                setEditingCommentId(item.id);
+                                setEditedCommentContent(item.konten);
                                 setEditedCommentFileUrl(item.file_url || "");
                               }} className="text-slate-700 cursor-pointer">
                                 <Pencil className="h-4 w-4 mr-2" /> Edit Komentar
                               </DropdownMenuItem>
                             )}
                             {canDeleteComment && (
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={async () => {
                                   if (!confirm("Apakah Anda yakin ingin menghapus komentar ini?")) return;
                                   const formData = new FormData();
@@ -416,7 +416,7 @@ export function ForumDetailManager({ user, topik, initialKomentar }: ForumDetail
 
       {/* Reply Box */}
       {canComment && (
-        <div className="bg-white/90 backdrop-blur-md border-t border-slate-200 p-3 sm:p-4 sticky bottom-0 z-50">
+        <div className="bg-white/90 backdrop-blur-md border-t border-slate-200 p-3 sm:p-4 shrink-0 z-50">
           <form onSubmit={handleSubmit} className="flex flex-col gap-2 max-w-4xl mx-auto">
             {showFileUrlInput && (
               <div className="flex animate-in slide-in-from-bottom-2 fade-in pb-1">
@@ -439,26 +439,26 @@ export function ForumDetailManager({ user, topik, initialKomentar }: ForumDetail
                 <Pin className="h-5 w-5 transform rotate-45" />
               </Button>
               <div className="flex-1 bg-slate-100 rounded-3xl border border-slate-200 px-4 py-1.5 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all shadow-inner">
-              <Textarea
-                placeholder="Tulis pesan..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                  }
-                }}
-                className="border-none bg-transparent focus:ring-0 font-medium min-h-[40px] max-h-[120px] resize-none py-2 shadow-none px-0"
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={isPending || (!newComment.trim() && !fileUrl.trim())}
-              className="h-12 w-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 transition-all active:scale-95 shrink-0"
-            >
-              {isPending ? <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send className="h-5 w-5 ml-0.5" />}
-            </Button>
+                <Textarea
+                  placeholder="Tulis pesan..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
+                  className="border-none bg-transparent focus:ring-0 font-medium min-h-[40px] max-h-[120px] resize-none py-2 shadow-none px-0"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={isPending || (!newComment.trim() && !fileUrl.trim())}
+                className="h-12 w-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 transition-all active:scale-95 shrink-0"
+              >
+                {isPending ? <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send className="h-5 w-5 ml-0.5" />}
+              </Button>
             </div>
           </form>
         </div>

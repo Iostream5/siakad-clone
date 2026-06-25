@@ -438,7 +438,7 @@ export function KrsManager({
                       </TD>
                       <TD className="text-xs text-slate-500">{new Date(item.updated_at).toLocaleString('id-ID')}</TD>
                       <TD>
-                         <Button variant="secondary" size="sm" className="h-8 w-8 p-0" onClick={() => setValidatingItem(item)}>
+                         <Button variant="secondary" size="sm" className="h-11 w-11 sm:h-8 sm:w-8 p-0" onClick={() => setValidatingItem(item)}>
                             <Eye className="h-4 w-4" />
                          </Button>
                       </TD>

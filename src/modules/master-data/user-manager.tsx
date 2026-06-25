@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { KeyRound, Pencil, Search, Trash2, X, Users } from "lucide-react";
+import { KeyRound, Loader2, Pencil, Search, Trash2, X, Users } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { deleteUserAction, resetUserPasswordAction, updateUserAction } from "@/actions/users";
@@ -55,7 +55,7 @@ function ModalShell({ open, title, description, onClose, children }: any) {
             <p className="text-sm text-slate-500">{description}</p>
             <h3 className="mt-1 text-xl font-semibold text-slate-950">{title}</h3>
           </div>
-          <button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={onClose} className="inline-flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900"><X className="h-4 w-4" /></button>
         </div>
         <div className="px-5 py-5 sm:px-6">{children}</div>
       </div>
@@ -106,15 +106,24 @@ function UserFormModal({ open, onClose, item }: { open: boolean, onClose: () => 
   );
 }
 
+function ResetPasswordSubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending} className="bg-amber-600 hover:bg-amber-700 text-white">
+      {pending ? (
+        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Mereset...</>
+      ) : (
+        "Reset Password"
+      )}
+    </Button>
+  );
+}
+
 function ResetPasswordModal({ open, onClose, item }: { open: boolean, onClose: () => void, item: UserItem | null }) {
-  const router = useRouter();
-  const [state, formAction] = useActionState(resetUserPasswordAction as any, initialState);
-  useActionToast(state, "Password berhasil direset ke default");
-  useEffect(() => { if (state?.success) { onClose(); router.refresh(); } }, [onClose, router, state?.success]);
   if (!item) return null;
   return (
     <ModalShell open={open} onClose={onClose} title="Reset Password" description="Setel ulang kata sandi ke default">
-      <form action={formAction} className="space-y-5">
+      <form action={resetUserPasswordAction} className="space-y-5">
         <input type="hidden" name="id" value={item.id} />
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <p className="text-sm text-amber-900">Reset password untuk akun berikut?</p>
@@ -124,7 +133,7 @@ function ResetPasswordModal({ open, onClose, item }: { open: boolean, onClose: (
         </div>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>Batal</Button>
-          <Button type="submit" className="bg-amber-600 hover:bg-amber-700 text-white">Reset Password</Button>
+          <ResetPasswordSubmitButton />
         </div>
       </form>
     </ModalShell>
@@ -209,9 +218,9 @@ export function UserManager({ items, totalItems, totalPages, currentPage, query 
                   <TD className="text-xs text-slate-500">{new Date(item.created_at).toLocaleDateString('id-ID')}</TD>
                   <TD>
                     <div className="flex gap-2">
-                      <Button variant="secondary" size="sm" onClick={() => { setEditingItem(item); setFormOpen(true); }} className="h-9 w-9 p-0"><Pencil className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => setResettingItem(item)} className="h-9 w-9 p-0 text-amber-600 hover:bg-amber-50"><KeyRound className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => setDeletingItem(item)} className="h-9 w-9 p-0 text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /></Button>
+                      <Button variant="secondary" size="sm" onClick={() => { setEditingItem(item); setFormOpen(true); }} className="h-11 w-11 sm:h-9 sm:w-9 p-0"><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => setResettingItem(item)} className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-amber-600 hover:bg-amber-50"><KeyRound className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => setDeletingItem(item)} className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /></Button>
                     </div>
                   </TD>
                 </TR>

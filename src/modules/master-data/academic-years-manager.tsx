@@ -70,7 +70,7 @@ function DeleteAcademicYearModal({
       <Card className="w-full max-w-md shadow-2xl p-6">
         <div className="flex items-center justify-between mb-4">
            <h3 className="text-xl font-bold text-slate-900">Hapus Tahun Akademik</h3>
-           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="h-6 w-6" /></button>
+           <button onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X className="h-5 w-5 sm:h-6 sm:w-6" /></button>
         </div>
         <form action={formAction} className="space-y-5">
           <input type="hidden" name="id" value={item.id} />
@@ -274,10 +274,10 @@ export function AcademicYearsManager({
                         </TD>
                         <TD>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-white hover:text-amber-600" onClick={() => setEditingItem(item)}>
+                            <Button variant="ghost" size="sm" className="h-11 w-11 sm:h-8 sm:w-8 p-0 hover:bg-white hover:text-amber-600" onClick={() => setEditingItem(item)}>
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-rose-400 hover:bg-rose-50 hover:text-rose-600" onClick={() => setDeletingItem(item)}>
+                            <Button variant="ghost" size="sm" className="h-11 w-11 sm:h-8 sm:w-8 p-0 text-rose-400 hover:bg-rose-50 hover:text-rose-600" onClick={() => setDeletingItem(item)}>
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
@@ -293,10 +293,10 @@ export function AcademicYearsManager({
               <p className="text-xs text-slate-500">Hal. {currentPage} dari {totalPages}</p>
               <div className="flex gap-1">
                 <Link href={buildPageLink(Math.max(1, currentPage - 1), query)}>
-                  <Button variant="secondary" size="sm" className="h-8 text-[10px]" disabled={currentPage <= 1}>Prev</Button>
+                  <Button variant="secondary" size="sm" className="h-11 sm:h-8 px-4 text-[10px]" disabled={currentPage <= 1}>Prev</Button>
                 </Link>
                 <Link href={buildPageLink(Math.min(totalPages, currentPage + 1), query)}>
-                  <Button variant="secondary" size="sm" className="h-8 text-[10px]" disabled={currentPage >= totalPages}>Next</Button>
+                  <Button variant="secondary" size="sm" className="h-11 sm:h-8 px-4 text-[10px]" disabled={currentPage >= totalPages}>Next</Button>
                 </Link>
               </div>
             </div>

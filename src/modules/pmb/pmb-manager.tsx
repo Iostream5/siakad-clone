@@ -469,7 +469,7 @@ export function PmbManager({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-8 w-8 rounded-lg border border-transparent text-cyan-600 transition-all hover:border-cyan-100 hover:bg-cyan-50"
+                          className="h-11 w-11 sm:h-8 sm:w-8 rounded-lg border border-transparent text-cyan-600 transition-all hover:border-cyan-100 hover:bg-cyan-50"
                           title="Lihat Detail"
                           onClick={() => setSelectedPmb(item)}
                         >
@@ -523,7 +523,7 @@ export function PmbManager({
                             <form action={updatePmbStatusAction}>
                               <input type="hidden" name="id" value={item.id} />
                               <input type="hidden" name="status" value="DITOLAK" />
-                              <Button size="sm" variant="ghost" className="h-8 w-8 rounded-lg text-rose-600 hover:bg-rose-50" title="Tolak">
+                                <Button size="sm" variant="ghost" className="h-11 w-11 sm:h-8 sm:w-8 rounded-lg text-rose-600 hover:bg-rose-50" title="Tolak">
                                 <XCircle className="h-4 w-4" />
                               </Button>
                             </form>
@@ -1373,7 +1373,7 @@ function PmbFeeSetup({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 rounded-lg text-blue-500 hover:bg-blue-50"
+                        className="h-11 w-11 sm:h-8 sm:w-8 rounded-lg text-blue-500 hover:bg-blue-50"
                         title="Edit Tarif"
                         onClick={() => { setEditingFee(fee); setShowModal(true); }}
                       >
@@ -1381,7 +1381,7 @@ function PmbFeeSetup({
                       </Button>
                       <form action={deletePmbFeeAction}>
                         <input type="hidden" name="id" value={fee.id} />
-                        <Button variant="ghost" size="sm" className="h-8 w-8 rounded-lg text-rose-600 hover:bg-rose-50" title="Hapus Tarif">
+                        <Button variant="ghost" size="sm" className="h-11 w-11 sm:h-8 sm:w-8 rounded-lg text-rose-600 hover:bg-rose-50" title="Hapus Tarif">
                           <XCircle className="h-4 w-4" />
                         </Button>
                       </form>

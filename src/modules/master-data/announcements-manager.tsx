@@ -45,7 +45,7 @@ function ModalShell({
             <p className="text-sm text-slate-500">{description}</p>
             <h3 className="mt-1 text-xl font-semibold text-slate-950">{title}</h3>
           </div>
-          <button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={onClose} className="inline-flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900"><X className="h-4 w-4" /></button>
         </div>
         <div className="px-5 py-5 sm:px-6">{children}</div>
       </div>
@@ -110,7 +110,7 @@ function DeleteForm({ id }: { id: string }) {
   return (
     <form action={formAction} className="inline-block">
       <input type="hidden" name="id" value={id} />
-      <Button type="submit" variant="ghost" size="sm" className="h-9 w-9 p-0 text-rose-600 hover:bg-rose-50">
+      <Button type="submit" variant="ghost" size="sm" className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-rose-600 hover:bg-rose-50">
         <Trash2 className="h-3.5 w-3.5" />
       </Button>
     </form>
@@ -148,7 +148,7 @@ export function AnnouncementsManager({ items }: { items: AnnouncementRow[] }) {
                   <TD className="text-xs text-slate-500">{new Date(item.created_at).toLocaleDateString('id-ID')}</TD>
                   <TD>
                     <div className="flex gap-2">
-                      <Button variant="secondary" size="sm" onClick={() => { setEditingItem(item); setFormOpen(true); }} className="h-9 w-9 p-0"><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button variant="secondary" size="sm" onClick={() => { setEditingItem(item); setFormOpen(true); }} className="h-11 w-11 sm:h-9 sm:w-9 p-0"><Pencil className="h-3.5 w-3.5" /></Button>
                       <DeleteForm id={item.id} />
                     </div>
                   </TD>

@@ -18,6 +18,8 @@ import {
   updateLmsMateri,
   validateLmsSubmission,
   updateLmsForumTopik,
+  deleteLmsForumTopik,
+  updateLmsForumKomentar,
 } from "@/lib/admin/lms";
 import { createAdminClient } from "@/supabase/admin";
 import { requireAuthorizedUser } from "@/lib/auth";
