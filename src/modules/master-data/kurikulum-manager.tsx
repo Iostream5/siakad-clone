@@ -74,7 +74,7 @@ function ModalShell({ open, title, description, onClose, children }: { open: boo
       <div className="w-full max-w-2xl overflow-hidden rounded-[1.75rem] border border-white/60 bg-white shadow-[0_28px_70px_rgba(15,23,42,0.28)]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-6">
           <div><p className="text-sm text-slate-500">{description}</p><h3 className="mt-1 text-xl font-semibold text-slate-950">{title}</h3></div>
-          <button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={onClose} className="inline-flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900"><X className="h-4 w-4" /></button>
         </div>
         <div className="px-5 py-5 sm:px-6">{children}</div>
       </div>
@@ -292,11 +292,11 @@ export function KurikulumManager({ items, totalItems, totalPages, currentPage, q
                   <TD>
                     {mode === "trash" ? (
                       <div className="flex gap-2">
-                        <form action={restoreAction}><input type="hidden" name="id" value={item.id} /><Button type="submit" variant="secondary" size="sm" className="h-9 w-9 p-0"><RotateCcw className="h-3.5 w-3.5" /></Button></form>
-                        <form action={hardDeleteAction}><input type="hidden" name="id" value={item.id} /><Button type="submit" size="sm" className="h-9 w-9 p-0 bg-rose-600 hover:bg-rose-700 text-white"><Trash2 className="h-3.5 w-3.5" /></Button></form>
+                        <form action={restoreAction}><input type="hidden" name="id" value={item.id} /><Button type="submit" variant="secondary" size="sm" className="h-11 w-11 sm:h-9 sm:w-9 p-0"><RotateCcw className="h-3.5 w-3.5" /></Button></form>
+                        <form action={hardDeleteAction}><input type="hidden" name="id" value={item.id} /><Button type="submit" size="sm" className="h-11 w-11 sm:h-9 sm:w-9 p-0 bg-rose-600 hover:bg-rose-700 text-white"><Trash2 className="h-3.5 w-3.5" /></Button></form>
                       </div>
                     ) : (
-                      <div className="flex gap-2"><Button variant="secondary" size="sm" onClick={() => { setEditingItem(item); setFormOpen(true); }} className="h-9 w-9 p-0"><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" onClick={() => setDeletingItem(item)} className="h-9 w-9 p-0 text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /></Button></div>
+                      <div className="flex gap-2"><Button variant="secondary" size="sm" onClick={() => { setEditingItem(item); setFormOpen(true); }} className="h-11 w-11 sm:h-9 sm:w-9 p-0"><Pencil className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="sm" onClick={() => setDeletingItem(item)} className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /></Button></div>
                     )}
                   </TD>
                 </TR>

@@ -12,9 +12,14 @@ import {
   createLmsForumTopik,
   createLmsMateri,
   createLmsTugas,
+  deleteLmsForumKomentar,
   getLmsForumTopikDetails,
   submitLmsTugas,
+  updateLmsMateri,
   validateLmsSubmission,
+  updateLmsForumTopik,
+  deleteLmsForumTopik,
+  updateLmsForumKomentar,
 } from "@/lib/admin/lms";
 import { createAdminClient } from "@/supabase/admin";
 import { requireAuthorizedUser } from "@/lib/auth";
@@ -36,6 +41,7 @@ const textField = (message: string, max = 5000) => z
 const createCommentSchema = z.object({
   topikId: z.string().uuid("Topik tidak valid."),
   konten: textField("Komentar wajib diisi."),
+  fileUrl: optionalUrl,
 });
 
 const createMateriSchema = z.object({
@@ -70,6 +76,7 @@ const createTopikSchema = z.object({
   judul: textField("Judul topik wajib diisi.", 200),
   konten: textField("Isi diskusi wajib diisi."),
   isPinned: z.boolean(),
+  fileUrl: optionalUrl,
 });
 
 const gradeSchema = z.object({
@@ -120,6 +127,7 @@ export async function createLmsForumKomentarAction(formData: FormData) {
     const parsed = createCommentSchema.parse({
       topikId: formString(formData, "topikId"),
       konten: formString(formData, "konten"),
+      fileUrl: formString(formData, "fileUrl"),
     });
 
     if (!(await canAccessLmsTopik({ userId: user.id, role: user.role, topikId: parsed.topikId }))) {
@@ -136,6 +144,7 @@ export async function createLmsForumKomentarAction(formData: FormData) {
         topik_id: parsed.topikId,
         user_id: user.id,
         konten: parsed.konten,
+        file_url: parsed.fileUrl || null,
       })
       .select()
       .single();
@@ -245,6 +254,51 @@ export async function createLmsMateriAction(formData: FormData) {
   }
 }
 
+export async function updateLmsMateriAction(formData: FormData) {
+  const user = await requireAuthorizedUser("akademik.lms", ["Dosen", "Admin"]);
+
+  try {
+    const materiId = formString(formData, "materiId");
+    const jadwalId = formString(formData, "jadwalId");
+    
+    const parsed = createMateriSchema.parse({
+      jadwalId,
+      judul: formString(formData, "judul"),
+      deskripsi: formString(formData, "deskripsi"),
+      fileUrl: formString(formData, "fileUrl"),
+      fileType: formString(formData, "fileType") || undefined,
+      isVisible: formData.get("isVisible") !== "false",
+    });
+
+    if (!(await canManageLmsClass({ userId: user.id, role: user.role, jadwalId: parsed.jadwalId }))) {
+      throw new Error("Anda tidak memiliki akses mengelola kelas ini.");
+    }
+
+    const data = await updateLmsMateri({
+      id: materiId,
+      judul: parsed.judul,
+      deskripsi: parsed.deskripsi,
+      fileUrl: parsed.fileUrl,
+      fileType: parsed.fileType,
+      isVisible: parsed.isVisible,
+    });
+
+    await logActivity({
+      modul: "LMS - Materi",
+      aksi: "UPDATE",
+      tableName: "lms_materi",
+      recordId: materiId,
+      newData: parsed,
+    });
+
+    revalidatePath(`/dashboard/akademik/lms/${parsed.jadwalId}`);
+    revalidatePath("/dashboard/akademik/lms");
+    return { success: true, data };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}
+
 export async function createLmsTugasAction(formData: FormData) {
   const user = await requireAuthorizedUser("akademik.lms", ["Admin", "Dosen"]);
 
@@ -323,6 +377,7 @@ export async function createLmsForumTopikAction(formData: FormData) {
       judul: formString(formData, "judul"),
       konten: formString(formData, "konten"),
       isPinned: formData.get("isPinned") === "true",
+      fileUrl: formString(formData, "fileUrl"),
     });
 
     if (!(await canAccessLmsJadwal({ userId: user.id, role: user.role, jadwalId: parsed.jadwalId }))) {
@@ -346,6 +401,136 @@ export async function createLmsForumTopikAction(formData: FormData) {
 
     revalidatePath(`/dashboard/akademik/lms/${parsed.jadwalId}`);
     return { success: true, data };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}
+
+export async function updateLmsForumTopikAction(formData: FormData) {
+  const user = await requireAuthorizedUser("akademik.lms", ["Dosen", "Mahasiswa"]);
+
+  try {
+    const topikId = formString(formData, "topikId");
+    const jadwalId = formString(formData, "jadwalId");
+    
+    const parsed = createTopikSchema.parse({
+      jadwalId,
+      judul: formString(formData, "judul"),
+      konten: formString(formData, "konten"),
+      isPinned: formData.get("isPinned") === "true",
+      fileUrl: formString(formData, "fileUrl"),
+    });
+
+    if (!(await canAccessLmsJadwal({ userId: user.id, role: user.role, jadwalId: parsed.jadwalId }))) {
+      throw new Error("Anda tidak memiliki akses ke kelas ini.");
+    }
+
+    const data = await updateLmsForumTopik({
+      id: topikId,
+      judul: parsed.judul,
+      konten: parsed.konten,
+      fileUrl: parsed.fileUrl,
+    });
+
+    await logActivity({
+      modul: "LMS - Forum",
+      aksi: "UPDATE",
+      tableName: "lms_forum_topik",
+      recordId: topikId,
+      newData: parsed,
+    });
+
+    revalidatePath(`/dashboard/akademik/lms/${jadwalId}`);
+    revalidatePath(`/dashboard/akademik/lms/${jadwalId}/forum/${topikId}`);
+    return { success: true, data };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}
+
+export async function deleteLmsForumTopikAction(formData: FormData) {
+  const user = await requireAuthorizedUser("akademik.lms", ["Dosen", "Mahasiswa"]);
+
+  try {
+    const topikId = formString(formData, "topikId");
+    const jadwalId = formString(formData, "jadwalId");
+
+    if (!(await canAccessLmsJadwal({ userId: user.id, role: user.role, jadwalId }))) {
+      throw new Error("Anda tidak memiliki akses ke kelas ini.");
+    }
+
+    await deleteLmsForumTopik(topikId);
+
+    await logActivity({
+      modul: "LMS - Forum",
+      aksi: "DELETE",
+      tableName: "lms_forum_topik",
+      recordId: topikId,
+    });
+
+    revalidatePath(`/dashboard/akademik/lms/${jadwalId}`);
+    return { success: true };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}
+
+export async function deleteLmsForumKomentarAction(formData: FormData) {
+  const user = await requireAuthorizedUser("akademik.lms", ["Dosen", "Mahasiswa"]);
+
+  try {
+    const komentarId = formString(formData, "komentarId");
+    const jadwalId = formString(formData, "jadwalId");
+
+    const result = await deleteLmsForumKomentar({
+      komentarId,
+      userId: user.id,
+      userRole: user.role,
+    });
+
+    await logActivity({
+      modul: "LMS - Forum",
+      aksi: "DELETE",
+      tableName: "lms_forum_komentar",
+      recordId: komentarId,
+      newData: { deleted_by: user.role },
+    });
+
+    revalidatePath(`/dashboard/akademik/lms/${jadwalId}/forum/${formData.get("topikId")}`);
+    return { success: true, data: result };
+  } catch (error) {
+    return { error: getErrorMessage(error) };
+  }
+}
+
+export async function updateLmsForumKomentarAction(formData: FormData) {
+  const user = await requireAuthorizedUser("akademik.lms", ["Admin", "Dosen", "Mahasiswa"]);
+
+  try {
+    const komentarId = formString(formData, "komentarId");
+    const konten = formString(formData, "konten");
+    const fileUrl = formString(formData, "fileUrl");
+
+    if (!konten.trim()) {
+      throw new Error("Komentar tidak boleh kosong");
+    }
+
+    const result = await updateLmsForumKomentar({
+      komentarId,
+      userId: user.id,
+      konten: konten.trim(),
+      fileUrl: fileUrl || undefined,
+    });
+
+    await logActivity({
+      modul: "LMS - Forum",
+      aksi: "UPDATE",
+      tableName: "lms_forum_komentar",
+      recordId: komentarId,
+      newData: { konten: konten.trim() },
+    });
+
+    return { success: true, data: result };
   } catch (error) {
     return { error: getErrorMessage(error) };
   }

@@ -179,14 +179,14 @@ export function CalonMahasiswaDashboard({
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href={stage.href} className="inline-flex items-center rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--primary-strong)]">
+            <Link href={stage.href} className="inline-flex h-11 sm:h-10 items-center rounded-xl bg-[var(--primary)] px-4 text-sm font-semibold text-white hover:bg-[var(--primary-strong)]">
               {stage.label}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
-            <Link href="/dashboard/keuangan?tab=pmb" className="inline-flex items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            <Link href="/dashboard/keuangan?tab=pmb" className="inline-flex h-11 sm:h-10 items-center rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               Bayar PMB
             </Link>
-            <Link href="/dashboard/notifikasi" className="inline-flex items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            <Link href="/dashboard/notifikasi" className="inline-flex h-11 sm:h-10 items-center rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               Notifikasi
             </Link>
           </div>
@@ -307,16 +307,16 @@ export function CalonMahasiswaDashboard({
             </div>
           </div>
           <div className="mt-4 space-y-3">
-            <Link href="/dashboard/keuangan?tab=pmb" className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            <Link href="/dashboard/keuangan?tab=pmb" className="flex min-h-[44px] items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               Bayar invoice PMB <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link href="/dashboard/keuangan?tab=pmb" className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            <Link href="/dashboard/keuangan?tab=pmb" className="flex min-h-[44px] items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               Upload bukti manual <Upload className="h-4 w-4" />
             </Link>
-            <Link href="/dashboard/notifikasi" className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            <Link href="/dashboard/notifikasi" className="flex min-h-[44px] items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               Lihat jadwal seleksi <CalendarDays className="h-4 w-4" />
             </Link>
-            <Link href="/dashboard/notifikasi" className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            <Link href="/dashboard/notifikasi" className="flex min-h-[44px] items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               Lihat hasil seleksi <FileText className="h-4 w-4" />
             </Link>
           </div>

@@ -79,7 +79,7 @@ function ModalShell({
             <p className="text-sm text-slate-500">{description}</p>
             <h3 className="mt-1 text-xl font-semibold text-slate-950">{title}</h3>
           </div>
-          <button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900">
+          <button type="button" onClick={onClose} className="inline-flex h-11 w-11 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -331,7 +331,7 @@ export function FacultiesManager({
                           variant="secondary"
                           size="sm"
                           onClick={() => { setEditingItem(item); setFormOpen(true); }}
-                          className="h-9 w-9 p-0"
+                          className="h-11 w-11 sm:h-9 sm:w-9 p-0"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
@@ -339,7 +339,7 @@ export function FacultiesManager({
                           variant="ghost"
                           size="sm"
                           onClick={() => setDeletingItem(item)}
-                          className="h-9 w-9 p-0 text-rose-600 hover:bg-rose-50"
+                          className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-rose-600 hover:bg-rose-50"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>

@@ -87,6 +87,7 @@ export function Topbar({
     if (hour >= 11 && hour < 15) return "Selamat Siang";
     if (hour >= 15 && hour < 18) return "Selamat Sore";
     return "Selamat Malam";
+
   };
 
   if (!clientReady) return null;
@@ -94,24 +95,26 @@ export function Topbar({
   return (
     <div className="sticky top-0 z-40 w-full mb-6">
       {/* Premium Glassmorphism Wrapper */}
-      <div className="mx-auto flex h-16 w-full items-center justify-between rounded-2xl bg-white/70 px-4 shadow-sm backdrop-blur-xl border border-white/80 ring-1 ring-slate-900/5 transition-all">
+      <div className="mx-auto flex h-14 sm:h-16 w-full items-center justify-between rounded-none sm:rounded-2xl bg-white/70 px-2 sm:px-4 shadow-sm backdrop-blur-xl border-0 sm:border sm:border-white/80 sm:ring-1 sm:ring-slate-900/5 transition-all gap-2">
         
         {/* Left Section: Mobile Menu & Greeting */}
-        <div className="flex min-w-0 items-center gap-4">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={onToggleSidebar}
-            className="h-10 w-10 shrink-0 rounded-xl p-0 text-slate-500 hover:bg-slate-100 lg:hidden"
+            className="h-11 w-11 sm:h-10 sm:w-10 shrink-0 rounded-xl p-0 text-slate-500 hover:bg-slate-100 lg:hidden"
+            aria-label="Toggle menu"
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="hidden min-w-0 md:block">
-            <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none">
-              {getTimeGreeting()}, {user.name?.split(' ')[0] || "User"} 👋
+          <div className="min-w-0">
+            <h2 className="text-sm sm:text-lg font-black text-slate-900 tracking-tight leading-none truncate">
+              <span className="sm:hidden">{user.name?.split(' ')[0] || "User"}</span>
+              <span className="hidden sm:inline">{getTimeGreeting()}, {user.name?.split(' ')[0] || "User"} 👋</span>
             </h2>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">
+            <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-0.5 sm:mt-1">
               {user.role} Workspace
             </p>
           </div>
@@ -123,26 +126,26 @@ export function Topbar({
           {/* Search Bar - Command Style */}
           <button 
             onClick={() => setIsCommandOpen(true)}
-            className="hidden md:flex items-center gap-2 h-10 w-64 rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-sm text-slate-400 transition-all hover:bg-white hover:border-slate-300 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="flex items-center gap-2 h-11 sm:h-10 w-11 sm:w-64 rounded-xl border border-slate-200 bg-slate-50/50 sm:px-3 text-sm text-slate-400 transition-all hover:bg-white hover:border-slate-300 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 justify-center sm:justify-start"
+            aria-label="Cari"
           >
             <Search className="h-4 w-4 shrink-0" />
-            <span className="flex-1 text-left font-medium">Cari sesuatu...</span>
-            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 font-mono text-[10px] font-bold text-slate-500 opacity-100">
+            <span className="hidden sm:inline flex-1 text-left font-medium">Cari sesuatu...</span>
+            <kbd className="pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-slate-100 px-1.5 font-mono text-[10px] font-bold text-slate-500 opacity-100">
               <span className="text-xs">⌘</span>K
             </kbd>
           </button>
 
           {/* Role Switcher (if multiple roles) */}
           {availableRoles.length > 1 && (
-            <div className="hidden md:block h-6 w-px bg-slate-200 mx-1" />
-          )}
-          {availableRoles.length > 1 && (
-            <form action={switchActiveRoleAction} className="hidden md:flex items-center">
+            <form action={switchActiveRoleAction} className="flex items-center">
               <input type="hidden" name="redirectTo" value={pathname || "/dashboard"} />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-10 rounded-xl border-slate-200 bg-white font-bold text-xs uppercase tracking-widest text-slate-600 gap-2">
-                    {user.role} <ChevronDown className="h-3 w-3" />
+                  <Button variant="outline" className="h-11 w-11 sm:h-10 sm:w-auto rounded-xl border-slate-200 bg-white font-bold text-xs uppercase tracking-widest text-slate-600 sm:gap-2 p-0 sm:px-4">
+                    <span className="hidden sm:inline">{user.role}</span>
+                    <span className="sm:hidden text-[10px]">{user.role.substring(0, 3)}</span>
+                    <ChevronDown className="h-3 w-3" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48 rounded-xl border-slate-100 shadow-xl">
@@ -160,17 +163,17 @@ export function Topbar({
             </form>
           )}
 
-          <div className="h-6 w-px bg-slate-200 mx-1 hidden md:block" />
+          <div className="hidden sm:block h-6 w-px bg-slate-200 mx-1" />
 
           {/* Action Icons */}
-          <div className="flex items-center gap-1">
-             <Button variant="ghost" className="h-10 w-10 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-indigo-600 transition-colors" onClick={() => setIsDark(!isDark)}>
+          <div className="flex items-center gap-0.5 sm:gap-1">
+             <Button variant="ghost" className="h-11 w-11 sm:h-10 sm:w-10 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-indigo-600 transition-colors p-0" onClick={() => setIsDark(!isDark)} aria-label="Toggle tema">
                {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
              </Button>
 
              <DropdownMenu>
                <DropdownMenuTrigger asChild>
-                 <Button variant="ghost" className="relative h-10 w-10 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-emerald-600 transition-colors">
+                 <Button variant="ghost" className="relative h-11 w-11 sm:h-10 sm:w-10 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-emerald-600 transition-colors p-0" aria-label="Notifikasi">
                    <Bell className="h-5 w-5" />
                    {hasUnread ? <span className="absolute right-2 top-2.5 flex h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" /> : null}
                  </Button>
@@ -178,7 +181,7 @@ export function Topbar({
                <DropdownMenuContent 
                  forceMount
                  align="end" 
-                 className="w-80 rounded-2xl border-slate-200 shadow-2xl p-0 overflow-hidden bg-white opacity-100 p-0"
+                 className="w-[calc(100vw-1rem)] sm:w-80 max-w-80 rounded-2xl border-slate-200 shadow-2xl p-0 overflow-hidden bg-white opacity-100"
                  asChild
                >
                  <motion.div
@@ -319,14 +322,13 @@ export function Topbar({
               </motion.div>
             </DropdownMenuContent>
           </DropdownMenu>
-
         </div>
       </div>
 
       <CommandSearch open={isCommandOpen} setOpen={setIsCommandOpen} />
 
       <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-50">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-50 sm:rounded-2xl">
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Profil Pengguna</h2>

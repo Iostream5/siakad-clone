@@ -159,7 +159,7 @@ export function MahasiswaDashboard({
               </div>
               <Link
                 href={data.nextAction.href}
-                className="inline-flex h-10 items-center justify-center rounded-lg bg-[var(--primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--primary-strong)]"
+                className="inline-flex h-11 sm:h-10 items-center justify-center rounded-lg bg-[var(--primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--primary-strong)]"
               >
                 {data.nextAction.label}
                 <ArrowRight className="ml-2 h-4 w-4" />

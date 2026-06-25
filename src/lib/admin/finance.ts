@@ -1546,6 +1546,7 @@ function isReusableGatewayPayment(payment: PendingGatewayPaymentRow, isProductio
 export async function requestFinancePaymentGateway(values: {
   userId: string;
   tagihanId: string;
+  amount?: number;
 }) {
   const supabase = createAdminClient();
   if (!supabase) throw new Error("Supabase admin client not available");
@@ -1579,7 +1580,25 @@ export async function requestFinancePaymentGateway(values: {
     throw new Error("Tagihan sudah lunas.");
   }
 
-  const amount = Number(tagihan.nominal);
+  const { data: payments } = await supabase
+    .from("pembayaran")
+    .select("nominal, status")
+    .eq("tagihan_id", tagihan.id)
+    .in("status", ["Terverifikasi", "Menunggu"]);
+
+  const paidAmount = (payments || [])
+    .filter((p) => p.status === "Terverifikasi")
+    .reduce((acc, p) => acc + Number(p.nominal), 0);
+  const pendingAmount = (payments || [])
+    .filter((p) => p.status === "Menunggu")
+    .reduce((acc, p) => acc + Number(p.nominal), 0);
+
+  const maxAmount = Number(tagihan.nominal) - paidAmount - pendingAmount;
+  const amount = values.amount ? Number(values.amount) : maxAmount;
+
+  if (amount <= 0 || amount > maxAmount) {
+    throw new Error(`Nominal pembayaran tidak valid. Sisa tagihan: ${maxAmount}.`);
+  }
 
   const staleGatewayCutoff = new Date(Date.now() - MIDTRANS_PAYMENT_SESSION_TTL_MS).toISOString();
   const { error: cleanupError } = await supabase
@@ -1597,7 +1616,7 @@ export async function requestFinancePaymentGateway(values: {
   // 2. Cek apakah sudah ada pembayaran pending dengan checkout_url
   const { data: existingPayment } = await supabase
     .from("pembayaran")
-    .select("id, checkout_url, provider, status, created_at")
+    .select("id, checkout_url, provider, status, created_at, nominal")
     .eq("tagihan_id", tagihan.id)
     .eq("metode", "Payment Gateway")
     .eq("status", "Menunggu")
@@ -1607,7 +1626,7 @@ export async function requestFinancePaymentGateway(values: {
     .maybeSingle();
 
   const reusablePayment = existingPayment as PendingGatewayPaymentRow | null;
-  if (reusablePayment && isReusableGatewayPayment(reusablePayment, midtrans.isProduction)) {
+  if (reusablePayment && isReusableGatewayPayment(reusablePayment, midtrans.isProduction) && Number(existingPayment?.nominal || 0) === amount) {
     await syncRegistrasiFromPendingTagihan(tagihan.id);
     return {
       provider: reusablePayment.provider ?? midtrans.provider,

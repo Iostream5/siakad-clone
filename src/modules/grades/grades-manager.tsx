@@ -229,7 +229,7 @@ export function GradesManager({
                             )}
                           </TD>
                           <TD className="px-6 py-4 text-right">
-                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-indigo-50 hover:text-indigo-600">
+                             <Button variant="ghost" size="sm" className="h-11 w-11 sm:h-8 sm:w-8 p-0 rounded-lg hover:bg-indigo-50 hover:text-indigo-600">
                                 <Save className="h-4 w-4" />
                              </Button>
                           </TD>

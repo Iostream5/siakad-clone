@@ -115,7 +115,7 @@ export function StudyProgramsManager({ items, totalItems, totalPages, currentPag
                   {editingItem ? 'Edit Program Studi' : 'Tambah Program Studi'}
                </h3>
                {editingItem && (
-                 <Button variant="ghost" size="sm" onClick={resetForm} className="h-8 w-8 p-0 rounded-full">
+                 <Button variant="ghost" size="sm" onClick={resetForm} className="h-11 w-11 sm:h-8 sm:w-8 p-0 rounded-full">
                     <X className="h-4 w-4" />
                  </Button>
                )}
@@ -211,8 +211,8 @@ export function StudyProgramsManager({ items, totalItems, totalPages, currentPag
                         <TD><Badge variant={item.is_active ? "success" : "secondary"}>{item.is_active ? "Aktif" : "Nonaktif"}</Badge></TD>
                         <TD>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-white hover:text-amber-600" onClick={() => setEditingItem(item)}><Pencil className="h-3.5 w-3.5" /></Button>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-rose-400 hover:bg-rose-50 hover:text-rose-600" onClick={() => setDeletingItem(item)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                            <Button variant="ghost" size="sm" className="h-11 w-11 sm:h-8 sm:w-8 p-0 hover:bg-white hover:text-amber-600" onClick={() => setEditingItem(item)}><Pencil className="h-3.5 w-3.5" /></Button>
+                            <Button variant="ghost" size="sm" className="h-11 w-11 sm:h-8 sm:w-8 p-0 text-rose-400 hover:bg-rose-50 hover:text-rose-600" onClick={() => setDeletingItem(item)}><Trash2 className="h-3.5 w-3.5" /></Button>
                           </div>
                         </TD>
                       </TR>

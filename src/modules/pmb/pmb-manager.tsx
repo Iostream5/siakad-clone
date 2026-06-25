@@ -4,15 +4,20 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
+  Award,
   BadgeCheck,
   CheckCircle2,
+  ChevronRight,
   Clock,
   Eye,
   FileCheck2,
   GraduationCap,
   Mail,
+  Pencil,
   Phone,
+  Plus,
   ReceiptText,
+  Settings2,
   Search,
   School,
   UserCheck,
@@ -38,6 +43,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
@@ -309,17 +315,17 @@ export function PmbManager({
     const csvContent = "data:text/csv;charset=utf-8,"
       + "Nomor Pendaftaran,Nama Lengkap,Email,No HP,Jalur,Prodi Pilihan,Status Pendaftaran,Status Seleksi\n"
       + items.map(item => {
-          return [
-            escapeCsv(item.nomor_pendaftaran),
-            escapeCsv(item.nama_lengkap),
-            escapeCsv(item.email),
-            escapeCsv(item.no_hp || "-"),
-            escapeCsv(item.jalur_pendaftaran || "-"),
-            escapeCsv(item.program_studi?.nama || "-"),
-            escapeCsv(item.status_pendaftaran),
-            escapeCsv(item.status_seleksi)
-          ].join(",");
-        }).join("\n");
+        return [
+          escapeCsv(item.nomor_pendaftaran),
+          escapeCsv(item.nama_lengkap),
+          escapeCsv(item.email),
+          escapeCsv(item.no_hp || "-"),
+          escapeCsv(item.jalur_pendaftaran || "-"),
+          escapeCsv(item.program_studi?.nama || "-"),
+          escapeCsv(item.status_pendaftaran),
+          escapeCsv(item.status_seleksi)
+        ].join(",");
+      }).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -463,7 +469,7 @@ export function PmbManager({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-8 w-8 rounded-lg border border-transparent text-cyan-600 transition-all hover:border-cyan-100 hover:bg-cyan-50"
+                          className="h-11 w-11 sm:h-8 sm:w-8 rounded-lg border border-transparent text-cyan-600 transition-all hover:border-cyan-100 hover:bg-cyan-50"
                           title="Lihat Detail"
                           onClick={() => setSelectedPmb(item)}
                         >
@@ -517,7 +523,7 @@ export function PmbManager({
                             <form action={updatePmbStatusAction}>
                               <input type="hidden" name="id" value={item.id} />
                               <input type="hidden" name="status" value="DITOLAK" />
-                              <Button size="sm" variant="ghost" className="h-8 w-8 rounded-lg text-rose-600 hover:bg-rose-50" title="Tolak">
+                                <Button size="sm" variant="ghost" className="h-11 w-11 sm:h-8 sm:w-8 rounded-lg text-rose-600 hover:bg-rose-50" title="Tolak">
                                 <XCircle className="h-4 w-4" />
                               </Button>
                             </form>
@@ -762,6 +768,234 @@ function calculateSelectionScore(
   return total;
 }
 
+function PmbKomponenNilaiModal({
+  open,
+  selectionData,
+  onClose,
+}: {
+  open: boolean;
+  selectionData: PmbSelectionData;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-lg border-none bg-white shadow-2xl sm:max-w-2xl">
+        <DialogHeader className="border-b border-slate-100 pb-4">
+          <DialogTitle className="text-lg font-black uppercase tracking-tight text-slate-900">Komponen Nilai</DialogTitle>
+          <DialogDescription className="text-xs font-semibold text-slate-500">
+            Atur komponen penilaian untuk seleksi PMB.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="py-4 space-y-4">
+          <form action={savePmbSelectionComponentAction} className="grid gap-3">
+            <Input name="nama" placeholder="Contoh: Wawancara" className="h-10 rounded-lg font-bold" required />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Input name="bobot" type="number" min={1} max={100} defaultValue={50} className="h-10 rounded-lg font-bold" required />
+              <Input name="skorMaks" type="number" min={1} defaultValue={100} className="h-10 rounded-lg font-bold" required />
+              <Input name="urutan" type="number" min={0} defaultValue={0} className="h-10 rounded-lg font-bold" required />
+            </div>
+            <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-600">
+              <input name="isActive" type="checkbox" defaultChecked className="h-4 w-4 accent-indigo-600" />
+              Aktif
+            </label>
+            <Button type="submit" onClick={onClose} className="h-10 rounded-lg bg-slate-900 text-[10px] font-black uppercase tracking-widest text-white hover:bg-black">
+              Simpan Komponen
+            </Button>
+          </form>
+
+          <div className="space-y-2">
+            {selectionData.components.map((component) => (
+              <div key={component.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+                <div>
+                  <p className="text-xs font-black uppercase text-slate-900">{component.nama}</p>
+                  <p className="text-[10px] font-bold text-slate-500">
+                    Bobot {component.bobot}% / Maks {component.skor_maks}
+                  </p>
+                </div>
+                <Badge className={cn("rounded-md text-[8px] font-black uppercase", component.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")}>
+                  {component.is_active ? "Aktif" : "Nonaktif"}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <DialogFooter className="border-t border-slate-100 pt-4">
+          <Button type="button" variant="ghost" onClick={onClose} className="h-11 rounded-lg px-6 text-[10px] font-black uppercase tracking-widest text-slate-500">
+            Tutup
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PmbPassingGradeModal({
+  open,
+  academicYears,
+  studyPrograms,
+  selectionData,
+  onClose,
+}: {
+  open: boolean;
+  academicYears: AcademicYearOption[];
+  studyPrograms: StudyProgramOption[];
+  selectionData: PmbSelectionData;
+  onClose: () => void;
+}) {
+  const activeYear = academicYears.find((item) => item.is_aktif) ?? academicYears[0] ?? null;
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-lg border-none bg-white shadow-2xl sm:max-w-2xl">
+        <DialogHeader className="border-b border-slate-100 pb-4">
+          <DialogTitle className="text-lg font-black uppercase tracking-tight text-slate-900">Passing Grade</DialogTitle>
+          <DialogDescription className="text-xs font-semibold text-slate-500">
+            Atur batas nilai minimum kelulusan untuk seleksi PMB.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="py-4 space-y-4">
+          <form action={savePmbPassingGradeAction} className="grid gap-3" onSubmit={onClose}>
+            <select name="tahunAkademikId" defaultValue={activeYear?.id ?? ""} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold">
+              <option value="">Semua tahun akademik</option>
+              {academicYears.map((year) => (
+                <option key={year.id} value={year.id}>{year.nama}</option>
+              ))}
+            </select>
+            <select name="prodiId" defaultValue="" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold">
+              <option value="">Semua prodi</option>
+              {studyPrograms.map((program) => (
+                <option key={program.id} value={program.id}>{program.nama}</option>
+              ))}
+            </select>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <select name="jalurPendaftaran" defaultValue="Semua" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold">
+                {feePaths.map((value) => <option key={value} value={value}>{value}</option>)}
+              </select>
+              <select name="jenisPendaftaran" defaultValue="Semua" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold">
+                {feeTypes.map((value) => <option key={value} value={value}>{value}</option>)}
+              </select>
+              <Input name="minimumSkor" type="number" min={0} max={100} defaultValue={60} className="h-10 rounded-lg font-bold" required />
+            </div>
+            <Input name="gelombang" placeholder="Gelombang opsional" className="h-10 rounded-lg font-bold" />
+            <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-600">
+              <input name="isActive" type="checkbox" defaultChecked className="h-4 w-4 accent-emerald-600" />
+              Aktif
+            </label>
+            <Button type="submit" onClick={onClose} className="h-10 rounded-lg bg-slate-900 text-[10px] font-black uppercase tracking-widest text-white hover:bg-black">
+              Simpan Passing Grade
+            </Button>
+          </form>
+
+          <div className="space-y-2">
+            {selectionData.passingGrades.length === 0 ? (
+              <p className="rounded-lg border border-slate-100 bg-slate-50 p-4 text-xs font-bold text-slate-500">Belum ada passing grade. Default sistem memakai skor 60.</p>
+            ) : (
+              selectionData.passingGrades.slice(0, 5).map((grade) => (
+                <div key={grade.id} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                  <p className="text-xs font-black text-slate-900">{grade.program_studi?.nama ?? "Semua prodi"} - Min {grade.minimum_skor}</p>
+                  <p className="mt-1 text-[10px] font-bold uppercase text-slate-500">{grade.jalur_pendaftaran} / {grade.jenis_pendaftaran}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <DialogFooter className="border-t border-slate-100 pt-4">
+          <Button type="button" variant="ghost" onClick={onClose} className="h-11 rounded-lg px-6 text-[10px] font-black uppercase tracking-widest text-slate-500">
+            Tutup
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PmbSetupSeleksiModal({
+  open,
+  selectionData,
+  academicYears,
+  studyPrograms,
+  onClose,
+}: {
+  open: boolean;
+  selectionData: PmbSelectionData;
+  academicYears: AcademicYearOption[];
+  studyPrograms: StudyProgramOption[];
+  onClose: () => void;
+}) {
+  const [subModal, setSubModal] = useState<"komponen" | "passing" | null>(null);
+
+  return (
+    <>
+      <Dialog open={open && !subModal} onOpenChange={(next) => { if (!next) onClose(); }}>
+        <DialogContent className="rounded-lg border-none bg-white shadow-2xl sm:max-w-md">
+          <DialogHeader className="border-b border-slate-100 pb-4">
+            <DialogTitle className="text-lg font-black uppercase tracking-tight text-slate-900">Setup Seleksi PMB</DialogTitle>
+            <DialogDescription className="text-xs font-semibold text-slate-500">
+              Pilih menu setup yang ingin dikelola.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-6">
+            <button
+              type="button"
+              onClick={() => setSubModal("komponen")}
+              className="group flex items-center gap-5 rounded-lg border-2 border-indigo-100 bg-indigo-50/50 p-6 text-left transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-md"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-lg">
+                <CheckCircle2 className="h-7 w-7" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-base font-black uppercase tracking-tight text-slate-900 group-hover:text-indigo-700">Komponen Nilai</h4>
+                <p className="mt-1 text-xs font-semibold text-slate-500">Atur komponen penilaian seleksi (wawancara, tes, dll)</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-indigo-600" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSubModal("passing")}
+              className="group flex items-center gap-5 rounded-lg border-2 border-emerald-100 bg-emerald-50/50 p-6 text-left transition-all hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-md"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-lg">
+                <Award className="h-7 w-7" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-base font-black uppercase tracking-tight text-slate-900 group-hover:text-emerald-700">Passing Grade</h4>
+                <p className="mt-1 text-xs font-semibold text-slate-500">Atur batas nilai minimum kelulusan per prodi/jalur</p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-emerald-600" />
+            </button>
+          </div>
+
+          <DialogFooter className="border-t border-slate-100 pt-4">
+            <Button type="button" variant="ghost" onClick={onClose} className="h-11 rounded-lg px-6 text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <PmbKomponenNilaiModal
+        open={subModal === "komponen"}
+        selectionData={selectionData}
+        onClose={() => setSubModal(null)}
+      />
+
+      <PmbPassingGradeModal
+        open={subModal === "passing"}
+        academicYears={academicYears}
+        studyPrograms={studyPrograms}
+        selectionData={selectionData}
+        onClose={() => setSubModal(null)}
+      />
+    </>
+  );
+}
+
 function PmbSelectionWorkspace({
   items,
   selectionData,
@@ -785,119 +1019,35 @@ function PmbSelectionWorkspace({
   search: string;
   setSearch: (value: string) => void;
 }) {
-  const activeYear = academicYears.find((item) => item.is_aktif) ?? academicYears[0] ?? null;
+  const [showSetupModal, setShowSetupModal] = useState(false);
   const canManageSetup = userRole === "Admin" || userRole === "Prodi";
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-      <div className="space-y-6">
-        {canManageSetup ? (
-          <Card className="rounded-lg border-slate-200 bg-white p-6 shadow-sm">
-            <div className="border-b border-slate-100 pb-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Setup Seleksi</p>
-              <h3 className="mt-1 text-lg font-black uppercase tracking-tight text-slate-900">Komponen Nilai</h3>
-            </div>
-            <form action={savePmbSelectionComponentAction} className="mt-5 grid gap-3">
-              <Input name="nama" placeholder="Contoh: Wawancara" className="h-10 rounded-lg font-bold" required />
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Input name="bobot" type="number" min={1} max={100} defaultValue={50} className="h-10 rounded-lg font-bold" required />
-                <Input name="skorMaks" type="number" min={1} defaultValue={100} className="h-10 rounded-lg font-bold" required />
-                <Input name="urutan" type="number" min={0} defaultValue={0} className="h-10 rounded-lg font-bold" required />
-              </div>
-              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-600">
-                <input name="isActive" type="checkbox" defaultChecked className="h-4 w-4 accent-indigo-600" />
-                Aktif
-              </label>
-              <Button className="h-10 rounded-lg bg-slate-900 text-[10px] font-black uppercase tracking-widest text-white hover:bg-black">
-                Simpan Komponen
-              </Button>
-            </form>
-
-            <div className="mt-5 space-y-2">
-              {selectionData.components.map((component) => (
-                <div key={component.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
-                  <div>
-                    <p className="text-xs font-black uppercase text-slate-900">{component.nama}</p>
-                    <p className="text-[10px] font-bold text-slate-500">
-                      Bobot {component.bobot}% / Maks {component.skor_maks}
-                    </p>
-                  </div>
-                  <Badge className={cn("rounded-md text-[8px] font-black uppercase", component.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")}>
-                    {component.is_active ? "Aktif" : "Nonaktif"}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </Card>
-        ) : null}
-
-        {canManageSetup ? (
-          <Card className="rounded-lg border-slate-200 bg-white p-6 shadow-sm">
-            <div className="border-b border-slate-100 pb-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Batas Lulus</p>
-              <h3 className="mt-1 text-lg font-black uppercase tracking-tight text-slate-900">Passing Grade</h3>
-            </div>
-            <form action={savePmbPassingGradeAction} className="mt-5 grid gap-3">
-              <select name="tahunAkademikId" defaultValue={activeYear?.id ?? ""} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold">
-                <option value="">Semua tahun akademik</option>
-                {academicYears.map((year) => (
-                  <option key={year.id} value={year.id}>{year.nama}</option>
-                ))}
-              </select>
-              <select name="prodiId" defaultValue="" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold">
-                <option value="">Semua prodi</option>
-                {studyPrograms.map((program) => (
-                  <option key={program.id} value={program.id}>{program.nama}</option>
-                ))}
-              </select>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <select name="jalurPendaftaran" defaultValue="Semua" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold">
-                  {feePaths.map((value) => <option key={value} value={value}>{value}</option>)}
-                </select>
-                <select name="jenisPendaftaran" defaultValue="Semua" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold">
-                  {feeTypes.map((value) => <option key={value} value={value}>{value}</option>)}
-                </select>
-                <Input name="minimumSkor" type="number" min={0} max={100} defaultValue={60} className="h-10 rounded-lg font-bold" required />
-              </div>
-              <Input name="gelombang" placeholder="Gelombang opsional" className="h-10 rounded-lg font-bold" />
-              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-600">
-                <input name="isActive" type="checkbox" defaultChecked className="h-4 w-4 accent-emerald-600" />
-                Aktif
-              </label>
-              <Button className="h-10 rounded-lg bg-slate-900 text-[10px] font-black uppercase tracking-widest text-white hover:bg-black">
-                Simpan Passing Grade
-              </Button>
-            </form>
-            <div className="mt-5 space-y-2">
-              {selectionData.passingGrades.length === 0 ? (
-                <p className="rounded-lg border border-slate-100 bg-slate-50 p-4 text-xs font-bold text-slate-500">Belum ada passing grade. Default sistem memakai skor 60.</p>
-              ) : (
-                selectionData.passingGrades.slice(0, 5).map((grade) => (
-                  <div key={grade.id} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-                    <p className="text-xs font-black text-slate-900">{grade.program_studi?.nama ?? "Semua prodi"} - Min {grade.minimum_skor}</p>
-                    <p className="mt-1 text-[10px] font-bold uppercase text-slate-500">{grade.jalur_pendaftaran} / {grade.jenis_pendaftaran}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
-        ) : null}
-      </div>
-
+    <div className="space-y-6">
       <Card className="overflow-hidden rounded-lg border-slate-200 bg-white p-0 shadow-sm">
         <div className="flex flex-col gap-4 border-b border-slate-100 bg-slate-50/70 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">Seleksi dan Wawancara</h3>
             <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Jadwal, skor, dan keputusan PMB</p>
           </div>
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Cari calon mahasiswa"
-              className="h-10 rounded-lg border-2 border-slate-100 bg-white pl-10 text-xs font-bold"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
+          <div className="flex items-center gap-3">
+            {canManageSetup ? (
+              <Button
+                onClick={() => setShowSetupModal(true)}
+                className="h-10 rounded-lg bg-indigo-600 px-5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg hover:bg-indigo-700"
+              >
+                <Settings2 className="mr-2 h-4 w-4" /> Setup Seleksi
+              </Button>
+            ) : null}
+            <div className="relative w-full max-w-sm">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Cari calon mahasiswa"
+                className="h-10 rounded-lg border-2 border-slate-100 bg-white pl-10 text-xs font-bold"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
           </div>
         </div>
 
@@ -992,39 +1142,57 @@ function PmbSelectionWorkspace({
           )}
         </div>
       </Card>
+
+      {canManageSetup ? (
+        <PmbSetupSeleksiModal
+          open={showSetupModal}
+          selectionData={selectionData}
+          academicYears={academicYears}
+          studyPrograms={studyPrograms}
+          onClose={() => setShowSetupModal(false)}
+        />
+      ) : null}
     </div>
   );
 }
 
-function PmbFeeSetup({
-  fees,
+function PmbFeeForm({
+  editingFee,
   academicYears,
   studyPrograms,
+  onClose,
 }: {
-  fees: PmbFeeItem[];
+  editingFee: PmbFeeItem | null;
   academicYears: AcademicYearOption[];
   studyPrograms: StudyProgramOption[];
+  onClose: () => void;
 }) {
   const defaultAcademicYear = academicYears.find((item) => item.is_aktif) ?? academicYears[0] ?? null;
+  const isEditing = editingFee !== null;
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-      <Card className="rounded-lg border-slate-200 bg-white p-6 shadow-sm">
-        <div className="border-b border-slate-100 pb-4">
-          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Master tarif tahunan</p>
-          <h3 className="mt-1 text-lg font-black uppercase tracking-tight text-slate-900">Tambah Tarif PMB</h3>
-          <p className="mt-2 text-xs leading-5 text-slate-500">
-            Tarif bisa dibuat umum untuk semua prodi atau spesifik per prodi. Jalur/jenis Semua menjadi fallback.
-          </p>
-        </div>
+    <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-lg border-none bg-white shadow-2xl sm:max-w-2xl">
+        <DialogHeader className="border-b border-slate-100 pb-4">
+          <DialogTitle className="text-lg font-black uppercase tracking-tight text-slate-900">
+            {isEditing ? "Edit Tarif PMB" : "Buat Tarif PMB"}
+          </DialogTitle>
+          <DialogDescription className="text-xs font-semibold text-slate-500">
+            {isEditing
+              ? `Memperbarui tarif: ${editingFee.nama}`
+              : "Tarif bisa dibuat umum untuk semua prodi atau spesifik per prodi."}
+          </DialogDescription>
+        </DialogHeader>
 
-        <form action={savePmbFeeAction} className="mt-5 grid gap-4">
+        <form action={savePmbFeeAction} className="grid gap-5 py-2" key={editingFee?.id ?? "create"}>
+          {isEditing ? <input type="hidden" name="id" value={editingFee.id} /> : null}
+
           <div>
             <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Tahun Akademik</label>
             <select
               name="tahunAkademikId"
-              defaultValue={defaultAcademicYear?.id ?? ""}
-              className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-[var(--primary)]"
+              defaultValue={editingFee?.tahun_akademik_id ?? defaultAcademicYear?.id ?? ""}
+              className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-emerald-500"
               required
             >
               {academicYears.length === 0 ? <option value="">Belum ada tahun akademik</option> : null}
@@ -1039,11 +1207,11 @@ function PmbFeeSetup({
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Nama Biaya</label>
-              <Input name="nama" defaultValue="Biaya Pendaftaran PMB" className="h-11 rounded-lg font-bold" required />
+              <Input name="nama" defaultValue={editingFee?.nama ?? "Biaya Pendaftaran PMB"} className="h-11 rounded-lg font-bold" required />
             </div>
             <div>
               <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Nominal</label>
-              <Input name="nominal" type="number" min={0} step={1000} defaultValue={250000} className="h-11 rounded-lg font-bold" required />
+              <Input name="nominal" type="number" min={0} step={1000} defaultValue={editingFee?.nominal ?? 250000} className="h-11 rounded-lg font-bold" required />
             </div>
           </div>
 
@@ -1051,8 +1219,8 @@ function PmbFeeSetup({
             <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Program Studi</label>
             <select
               name="prodiId"
-              className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-[var(--primary)]"
-              defaultValue=""
+              className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-emerald-500"
+              defaultValue={editingFee?.prodi_id ?? ""}
             >
               <option value="">Semua prodi</option>
               {studyPrograms.map((program) => (
@@ -1066,34 +1234,34 @@ function PmbFeeSetup({
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Jalur</label>
-              <select name="jalurPendaftaran" defaultValue="Semua" className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-[var(--primary)]">
+              <select name="jalurPendaftaran" defaultValue={editingFee?.jalur_pendaftaran ?? "Semua"} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-emerald-500">
                 {feePaths.map((value) => <option key={value} value={value}>{value}</option>)}
               </select>
             </div>
             <div>
               <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Jenis</label>
-              <select name="jenisPendaftaran" defaultValue="Semua" className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-[var(--primary)]">
+              <select name="jenisPendaftaran" defaultValue={editingFee?.jenis_pendaftaran ?? "Semua"} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-emerald-500">
                 {feeTypes.map((value) => <option key={value} value={value}>{value}</option>)}
               </select>
             </div>
             <div>
               <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Gelombang</label>
-              <Input name="gelombang" placeholder="Opsional" className="h-11 rounded-lg font-bold" />
+              <Input name="gelombang" defaultValue={editingFee?.gelombang ?? ""} placeholder="Opsional" className="h-11 rounded-lg font-bold" />
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Mulai Berlaku</label>
-              <Input name="tanggalMulai" type="date" className="h-11 rounded-lg font-bold" />
+              <Input name="tanggalMulai" type="date" defaultValue={editingFee?.tanggal_mulai?.split("T")[0] ?? ""} className="h-11 rounded-lg font-bold" />
             </div>
             <div>
               <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Selesai Berlaku</label>
-              <Input name="tanggalSelesai" type="date" className="h-11 rounded-lg font-bold" />
+              <Input name="tanggalSelesai" type="date" defaultValue={editingFee?.tanggal_selesai?.split("T")[0] ?? ""} className="h-11 rounded-lg font-bold" />
             </div>
             <div>
               <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">Jatuh Tempo</label>
-              <Input name="dueDays" type="number" min={1} max={60} defaultValue={3} className="h-11 rounded-lg font-bold" required />
+              <Input name="dueDays" type="number" min={1} max={60} defaultValue={editingFee?.due_days ?? 3} className="h-11 rounded-lg font-bold" required />
             </div>
           </div>
 
@@ -1102,88 +1270,138 @@ function PmbFeeSetup({
             <textarea
               name="catatan"
               rows={3}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-sm font-bold text-slate-800 outline-none focus:border-[var(--primary)]"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-sm font-bold text-slate-800 outline-none focus:border-emerald-500"
               placeholder="Opsional"
+              defaultValue={editingFee?.catatan ?? ""}
             />
           </div>
 
           <label className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-700">
-            <input name="isActive" type="checkbox" defaultChecked className="h-4 w-4 accent-emerald-600" />
+            <input name="isActive" type="checkbox" defaultChecked={editingFee?.is_active ?? true} className="h-4 w-4 accent-emerald-600" />
             Aktif untuk invoice baru
           </label>
 
-          <Button className="h-11 rounded-lg bg-slate-900 text-[10px] font-black uppercase tracking-widest text-white hover:bg-black">
-            Simpan Tarif PMB
-          </Button>
+          <DialogFooter className="border-t border-slate-100 pt-4">
+            <Button type="button" variant="ghost" onClick={onClose} className="h-11 rounded-lg px-6 text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Batal
+            </Button>
+            <Button type="submit" onClick={onClose} className={`h-11 rounded-lg px-6 text-[10px] font-black uppercase tracking-widest text-white ${isEditing ? "bg-amber-600 hover:bg-amber-700" : "bg-emerald-600 hover:bg-emerald-700"}`}>
+              {isEditing ? "Update Tarif" : "Simpan Tarif"}
+            </Button>
+          </DialogFooter>
         </form>
-      </Card>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
-      <Card className="overflow-hidden rounded-lg border-slate-200 bg-white p-0 shadow-sm">
-        <div className="border-b border-slate-100 bg-slate-50/70 p-6">
+function PmbFeeSetup({
+  fees,
+  academicYears,
+  studyPrograms,
+}: {
+  fees: PmbFeeItem[];
+  academicYears: AcademicYearOption[];
+  studyPrograms: StudyProgramOption[];
+}) {
+  const [showModal, setShowModal] = useState(false);
+  const [editingFee, setEditingFee] = useState<PmbFeeItem | null>(null);
+
+  return (
+    <Card className="overflow-hidden rounded-lg border-slate-200 bg-white p-0 shadow-sm">
+      <div className="flex flex-col gap-4 border-b border-slate-100 bg-slate-50/70 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
           <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Daftar tarif</p>
           <h3 className="mt-1 text-lg font-black uppercase tracking-tight text-slate-900">Biaya PMB per periode</h3>
         </div>
-        <div className="overflow-x-auto">
-          <Table>
-            <THead className="bg-slate-50/50">
+        <Button
+          onClick={() => { setEditingFee(null); setShowModal(true); }}
+          className="h-10 rounded-lg bg-emerald-600 px-5 text-[10px] font-black uppercase tracking-widest text-white shadow-lg hover:bg-emerald-700"
+        >
+          <Plus className="mr-2 h-4 w-4" /> Buat Tarif PMB
+        </Button>
+      </div>
+      <div className="overflow-x-auto">
+        <Table>
+          <THead className="bg-slate-50/50">
+            <TR>
+              <TH className="pl-6 text-[10px] font-black uppercase">Tahun</TH>
+              <TH className="text-[10px] font-black uppercase">Scope</TH>
+              <TH className="text-[10px] font-black uppercase">Nominal</TH>
+              <TH className="text-[10px] font-black uppercase">Berlaku</TH>
+              <TH className="text-right pr-6 text-[10px] font-black uppercase">Aksi</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {fees.length === 0 ? (
               <TR>
-                <TH className="pl-6 text-[10px] font-black uppercase">Tahun</TH>
-                <TH className="text-[10px] font-black uppercase">Scope</TH>
-                <TH className="text-[10px] font-black uppercase">Nominal</TH>
-                <TH className="text-[10px] font-black uppercase">Berlaku</TH>
-                <TH className="text-right pr-6 text-[10px] font-black uppercase">Aksi</TH>
+                <TD colSpan={5} className="py-16 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Belum ada tarif PMB. Klik "Buat Tarif PMB" untuk membuat tarif baru.
+                </TD>
               </TR>
-            </THead>
-            <TBody>
-              {fees.length === 0 ? (
-                <TR>
-                  <TD colSpan={5} className="py-16 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Belum ada tarif PMB
+            ) : (
+              fees.map((fee) => (
+                <TR key={fee.id} className="border-b border-slate-50">
+                  <TD className="pl-6">
+                    <p className="text-xs font-black text-slate-900">{fee.tahun_akademik?.nama ?? "-"}</p>
+                    <p className="mt-1 text-[10px] font-bold uppercase text-slate-400">{fee.tahun_akademik?.kode ?? "-"}</p>
                   </TD>
-                </TR>
-              ) : (
-                fees.map((fee) => (
-                  <TR key={fee.id} className="border-b border-slate-50">
-                    <TD className="pl-6">
-                      <p className="text-xs font-black text-slate-900">{fee.tahun_akademik?.nama ?? "-"}</p>
-                      <p className="mt-1 text-[10px] font-bold uppercase text-slate-400">{fee.tahun_akademik?.kode ?? "-"}</p>
-                    </TD>
-                    <TD>
-                      <p className="text-xs font-black uppercase text-slate-800">{fee.program_studi?.nama ?? "Semua prodi"}</p>
-                      <p className="mt-1 text-[10px] font-bold uppercase text-slate-500">
-                        {fee.jalur_pendaftaran} / {fee.jenis_pendaftaran}
+                  <TD>
+                    <p className="text-xs font-black uppercase text-slate-800">{fee.program_studi?.nama ?? "Semua prodi"}</p>
+                    <p className="mt-1 text-[10px] font-bold uppercase text-slate-500">
+                      {fee.jalur_pendaftaran} / {fee.jenis_pendaftaran}
+                    </p>
+                    {fee.gelombang ? <p className="mt-1 text-[10px] font-bold text-slate-400">{fee.gelombang}</p> : null}
+                  </TD>
+                  <TD>
+                    <p className="text-sm font-black text-slate-900">{formatCurrency(fee.nominal)}</p>
+                    <p className="mt-1 text-[10px] font-bold uppercase text-slate-400">{fee.due_days} hari jatuh tempo</p>
+                  </TD>
+                  <TD>
+                    <div className="space-y-1">
+                      <Badge className={cn("rounded-md px-2 text-[8px] font-black uppercase", fee.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")}>
+                        {fee.is_active ? "Aktif" : "Nonaktif"}
+                      </Badge>
+                      <p className="text-[10px] font-bold text-slate-500">
+                        {formatDate(fee.tanggal_mulai)} - {formatDate(fee.tanggal_selesai)}
                       </p>
-                      {fee.gelombang ? <p className="mt-1 text-[10px] font-bold text-slate-400">{fee.gelombang}</p> : null}
-                    </TD>
-                    <TD>
-                      <p className="text-sm font-black text-slate-900">{formatCurrency(fee.nominal)}</p>
-                      <p className="mt-1 text-[10px] font-bold uppercase text-slate-400">{fee.due_days} hari jatuh tempo</p>
-                    </TD>
-                    <TD>
-                      <div className="space-y-1">
-                        <Badge className={cn("rounded-md px-2 text-[8px] font-black uppercase", fee.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600")}>
-                          {fee.is_active ? "Aktif" : "Nonaktif"}
-                        </Badge>
-                        <p className="text-[10px] font-bold text-slate-500">
-                          {formatDate(fee.tanggal_mulai)} - {formatDate(fee.tanggal_selesai)}
-                        </p>
-                      </div>
-                    </TD>
-                    <TD className="pr-6 text-right">
+                    </div>
+                  </TD>
+                  <TD className="pr-6 text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-11 w-11 sm:h-8 sm:w-8 rounded-lg text-blue-500 hover:bg-blue-50"
+                        title="Edit Tarif"
+                        onClick={() => { setEditingFee(fee); setShowModal(true); }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                       <form action={deletePmbFeeAction}>
                         <input type="hidden" name="id" value={fee.id} />
-                        <Button variant="ghost" size="sm" className="h-8 rounded-lg text-rose-600 hover:bg-rose-50">
+                        <Button variant="ghost" size="sm" className="h-11 w-11 sm:h-8 sm:w-8 rounded-lg text-rose-600 hover:bg-rose-50" title="Hapus Tarif">
                           <XCircle className="h-4 w-4" />
                         </Button>
                       </form>
-                    </TD>
-                  </TR>
-                ))
-              )}
-            </TBody>
-          </Table>
-        </div>
-      </Card>
-    </div>
+                    </div>
+                  </TD>
+                </TR>
+              ))
+            )}
+          </TBody>
+        </Table>
+      </div>
+
+      {showModal ? (
+        <PmbFeeForm
+          editingFee={editingFee}
+          academicYears={academicYears}
+          studyPrograms={studyPrograms}
+          onClose={() => { setShowModal(false); setEditingFee(null); }}
+        />
+      ) : null}
+    </Card>
   );
 }

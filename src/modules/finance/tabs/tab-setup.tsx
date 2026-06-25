@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { BadgePercent, Banknote, Calculator, CalendarDays, ChevronRight, CreditCard, Landmark, Network, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { BadgePercent, Banknote, Calculator, CalendarDays, ChevronRight, CreditCard, Landmark, Network, Pencil, Plus, ReceiptText, Trash2 } from "lucide-react";
 
 import { deleteFinanceSetupAction, saveFinanceSetupAction, setActiveAcademicYearAction } from "@/actions/finance-setup";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,7 @@ interface TabSetupProps {
   setupData: FinanceSetupData;
   onAddMaster: () => void;
   onBulkTagihan: (id: string) => void;
+  onEditMaster: (id: string) => void;
   onDeleteMaster: (id: string) => void;
 }
 
@@ -78,17 +79,17 @@ function DeleteSetupButton({ kind, id }: { kind: string; id: string }) {
     <form action={deleteFinanceSetupAction}>
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="id" value={id} />
-      <Button size="sm" variant="ghost" className="h-8 w-8 rounded-none text-rose-500 hover:bg-rose-50">
+      <Button size="sm" variant="ghost" className="h-11 w-11 sm:h-8 sm:w-8 rounded-none text-rose-500 hover:bg-rose-50">
         <Trash2 className="h-4 w-4" />
       </Button>
     </form>
   );
 }
 
-function ActiveToggle() {
+function ActiveToggle({ defaultChecked = true }: { defaultChecked?: boolean }) {
   return (
     <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-      <input type="checkbox" name="isActive" defaultChecked /> Aktif
+      <input type="checkbox" name="isActive" defaultChecked={defaultChecked} /> Aktif
     </label>
   );
 }
@@ -100,11 +101,13 @@ export default function TabSetup({
   setupData,
   onAddMaster,
   onBulkTagihan,
+  onEditMaster,
   onDeleteMaster,
 }: TabSetupProps) {
   const searchParams = useSearchParams();
   const initialSetup = (searchParams.get("setup") as SetupKey | null) || "tarif";
   const [activeSetup, setActiveSetup] = useState<SetupKey>(setupMenuItems.some((item) => item.id === initialSetup) ? initialSetup : "tarif");
+  const [editItem, setEditItem] = useState<SetupRecord | null>(null);
 
   const activeTitle = useMemo(() => setupMenuItems.find((item) => item.id === activeSetup)?.label ?? "Setup", [activeSetup]);
 
@@ -126,7 +129,12 @@ export default function TabSetup({
             ))}
             {kind ? (
               <TD className="pr-6">
-                <div className="flex justify-end"><DeleteSetupButton kind={kind} id={row.id} /></div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" size="sm" variant="ghost" className="h-11 w-11 sm:h-8 sm:w-8 rounded-none text-blue-500 hover:bg-blue-50" onClick={() => setEditItem(row)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <DeleteSetupButton kind={kind} id={row.id} />
+                </div>
               </TD>
             ) : null}
           </TR>
@@ -212,7 +220,7 @@ export default function TabSetup({
                       <TD className="text-[10px] font-black text-slate-900">{mb.nama}</TD>
                       <TD className="whitespace-nowrap font-mono text-[11px] font-black text-slate-900">{formatCurrency(Number(mb.nominal))}</TD>
                       <TD><Badge variant={mb.status ? "success" : "secondary"} className="h-5 rounded-none px-2 text-[8px] font-black uppercase">{mb.status ? "Aktif" : "Nonaktif"}</Badge></TD>
-                      <TD className="pr-6"><div className="flex justify-end gap-2"><Button size="sm" variant="ghost" className="h-8 w-8 rounded-none text-emerald-600 hover:bg-emerald-50" onClick={() => onBulkTagihan(mb.id)}><Plus className="h-4 w-4" /></Button><Button size="sm" variant="ghost" className="h-8 w-8 rounded-none text-rose-500 hover:bg-rose-50" onClick={() => onDeleteMaster(mb.id)}><Trash2 className="h-4 w-4" /></Button></div></TD>
+                      <TD className="pr-6"><div className="flex justify-end gap-2"><Button size="sm" variant="ghost" className="h-11 w-11 sm:h-8 sm:w-8 rounded-none text-blue-500 hover:bg-blue-50" onClick={() => onEditMaster(mb.id)}><Pencil className="h-4 w-4" /></Button><Button size="sm" variant="ghost" className="h-11 w-11 sm:h-8 sm:w-8 rounded-none text-emerald-600 hover:bg-emerald-50" onClick={() => onBulkTagihan(mb.id)}><Plus className="h-4 w-4" /></Button><Button size="sm" variant="ghost" className="h-11 w-11 sm:h-8 sm:w-8 rounded-none text-rose-500 hover:bg-rose-50" onClick={() => onDeleteMaster(mb.id)}><Trash2 className="h-4 w-4" /></Button></div></TD>
                     </TR>
                   ))}
                 </TBody>

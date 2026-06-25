@@ -253,10 +253,10 @@ export function JadwalKuliahManager({
                   </TD>
                   <TD>
                     <div className="flex gap-2">
-                      <Button variant="secondary" size="sm" onClick={() => { setEditingItem(item); setFormOpen(true); }} className="h-8 w-8 p-0">
+                      <Button variant="secondary" size="sm" onClick={() => { setEditingItem(item); setFormOpen(true); }} className="h-11 w-11 sm:h-8 sm:w-8 p-0">
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setDeletingItem(item)} className="h-8 w-8 p-0 text-rose-600 hover:bg-rose-50">
+                      <Button variant="ghost" size="sm" onClick={() => setDeletingItem(item)} className="h-11 w-11 sm:h-8 sm:w-8 p-0 text-rose-600 hover:bg-rose-50">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

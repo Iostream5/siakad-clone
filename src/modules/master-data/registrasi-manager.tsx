@@ -269,10 +269,10 @@ export function RegistrasiManager({
                       </TD>
                       <TD>
                         <div className="flex gap-2">
-                          <Button size="sm" onClick={() => handleVerify(item.id)} disabled={isSubmitting || item.status === "LUNAS" || item.status === "DISPENSASI"}>
+                          <Button size="sm" className="h-11 sm:h-9" onClick={() => handleVerify(item.id)} disabled={isSubmitting || item.status === "LUNAS" || item.status === "DISPENSASI"}>
                             <CheckCircle className="mr-1 h-4 w-4" /> Verifikasi
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleDispensasi(item.id)} disabled={isSubmitting || item.status === "LUNAS"}>
+                          <Button size="sm" variant="outline" className="h-11 sm:h-9" onClick={() => handleDispensasi(item.id)} disabled={isSubmitting || item.status === "LUNAS"}>
                             <XCircle className="mr-1 h-4 w-4" /> Dispensasi
                           </Button>
                         </div>

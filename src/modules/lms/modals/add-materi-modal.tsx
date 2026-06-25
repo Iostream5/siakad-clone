@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useTransition, useEffect } from "react";
 import { 
   Dialog, 
   DialogContent, 
@@ -19,27 +19,43 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { createLmsMateriAction } from "@/actions/lms";
+import { createLmsMateriAction, updateLmsMateriAction } from "@/actions/lms";
 import { useToast } from "@/components/ui/toast-provider";
 
 interface AddMateriModalProps {
   isOpen: boolean;
   onClose: () => void;
   jadwalId: string;
+  editItem?: {
+    id: string;
+    judul: string;
+    deskripsi?: string | null;
+    file_url?: string | null;
+    file_type?: string | null;
+    is_visible: boolean;
+  } | null;
 }
 
-export function AddMateriModal({ isOpen, onClose, jadwalId }: AddMateriModalProps) {
+export function AddMateriModal({ isOpen, onClose, jadwalId, editItem }: AddMateriModalProps) {
   const [isPending, startTransition] = useTransition();
   const { success, error } = useToast();
+  const isEditMode = Boolean(editItem);
+
+  useEffect(() => {
+    if (!isOpen) return;
+  }, [isOpen]);
 
   async function handleSubmit(formData: FormData) {
     startTransition(async () => {
-      const result = await createLmsMateriAction(formData);
+      const result = isEditMode 
+        ? await updateLmsMateriAction(formData)
+        : await createLmsMateriAction(formData);
+      
       if (result.success) {
-        success("Materi berhasil diunggah");
+        success(isEditMode ? "Materi berhasil diperbarui" : "Materi berhasil diunggah");
         onClose();
       } else {
-        error(result.error || "Gagal mengunggah materi");
+        error(result.error || (isEditMode ? "Gagal memperbarui materi" : "Gagal mengunggah materi"));
       }
     });
   }
@@ -48,16 +64,20 @@ export function AddMateriModal({ isOpen, onClose, jadwalId }: AddMateriModalProp
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px] rounded-[1.5rem] border-none shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="text-xl font-black text-slate-900 uppercase tracking-tight">Upload Materi Kuliah</DialogTitle>
+          <DialogTitle className="text-xl font-black text-slate-900 uppercase tracking-tight">
+            {isEditMode ? "Edit Materi Kuliah" : "Upload Materi Kuliah"}
+          </DialogTitle>
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4 py-4">
           <input type="hidden" name="jadwalId" value={jadwalId} />
+          {editItem ? <input type="hidden" name="materiId" value={editItem?.id} /> : null}
           
           <div className="space-y-2">
             <Label htmlFor="judul" className="text-[10px] font-black uppercase tracking-widest text-slate-500">Judul Materi</Label>
             <Input 
               id="judul" 
               name="judul" 
+              defaultValue={editItem?.judul}
               placeholder="Contoh: Pertemuan 1 - Pengenalan Basis Data" 
               required 
               className="h-12 rounded-xl border-slate-200 focus:border-emerald-500 font-bold"
@@ -69,6 +89,7 @@ export function AddMateriModal({ isOpen, onClose, jadwalId }: AddMateriModalProp
             <Textarea 
               id="deskripsi" 
               name="deskripsi" 
+              defaultValue={editItem?.deskripsi || ""}
               placeholder="Berikan ringkasan materi atau instruksi bacaan..." 
               className="rounded-xl border-slate-200 focus:border-emerald-500 font-medium min-h-[100px]"
             />
@@ -77,7 +98,7 @@ export function AddMateriModal({ isOpen, onClose, jadwalId }: AddMateriModalProp
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="fileType" className="text-[10px] font-black uppercase tracking-widest text-slate-500">Tipe Konten</Label>
-              <Select name="fileType" defaultValue="pdf">
+              <Select name="fileType" defaultValue={editItem?.file_type || "pdf"}>
                 <SelectTrigger className="h-12 rounded-xl border-slate-200 font-bold">
                   <SelectValue placeholder="Pilih Tipe" />
                 </SelectTrigger>
@@ -96,6 +117,7 @@ export function AddMateriModal({ isOpen, onClose, jadwalId }: AddMateriModalProp
               <Input 
                 id="fileUrl" 
                 name="fileUrl" 
+                defaultValue={editItem?.file_url || ""}
                 placeholder="https://..." 
                 className="h-12 rounded-xl border-slate-200 focus:border-emerald-500 font-medium"
               />
@@ -104,7 +126,7 @@ export function AddMateriModal({ isOpen, onClose, jadwalId }: AddMateriModalProp
 
           <div className="space-y-2">
             <Label htmlFor="isVisible" className="text-[10px] font-black uppercase tracking-widest text-slate-500">Tampilkan ke Mahasiswa</Label>
-            <Select name="isVisible" defaultValue="true">
+            <Select name="isVisible" defaultValue={editItem?.is_visible ? "true" : "false"}>
               <SelectTrigger className="h-12 rounded-xl border-slate-200 font-bold">
                 <SelectValue placeholder="Pilih status" />
               </SelectTrigger>
@@ -129,7 +151,7 @@ export function AddMateriModal({ isOpen, onClose, jadwalId }: AddMateriModalProp
               disabled={isPending}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-xs h-12 px-8 rounded-xl shadow-lg shadow-emerald-100"
             >
-              {isPending ? "Mengunggah..." : "Simpan Materi"}
+              {isPending ? "Menyimpan..." : (isEditMode ? "Perbarui Materi" : "Simpan Materi")}
             </Button>
           </DialogFooter>
         </form>

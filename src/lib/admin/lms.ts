@@ -623,6 +623,7 @@ export async function getLmsForumKomentar(topikId: string) {
     topik_id: string;
     user_id: string;
     konten: string;
+    file_url: string | null;
     created_at: string;
     users?: Relation<{ full_name: string; role: string; avatar_url: string | null }>;
   }>).map((item) => ({
@@ -695,6 +696,34 @@ export async function createLmsMateri(values: {
       file_type: values.fileType || null,
       is_visible: values.isVisible ?? true,
     })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateLmsMateri(values: {
+  id: string;
+  judul: string;
+  deskripsi?: string;
+  fileUrl?: string;
+  fileType?: LmsMaterialFileType;
+  isVisible: boolean;
+}) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Client error");
+
+  const { data, error } = await supabase
+    .from("lms_materi")
+    .update({
+      judul: values.judul,
+      deskripsi: values.deskripsi || null,
+      file_url: values.fileUrl || null,
+      file_type: values.fileType || null,
+      is_visible: values.isVisible,
+    })
+    .eq("id", values.id)
     .select()
     .single();
 
@@ -826,6 +855,7 @@ export async function createLmsForumTopik(values: {
   judul: string;
   konten: string;
   isPinned?: boolean;
+  fileUrl?: string;
 }) {
   const supabase = createAdminClient();
   if (!supabase) throw new Error("Client error");
@@ -838,7 +868,124 @@ export async function createLmsForumTopik(values: {
       judul: values.judul,
       konten: values.konten,
       is_pinned: values.isPinned ?? false,
+      file_url: values.fileUrl || null,
     })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateLmsForumTopik(values: {
+  id: string;
+  judul: string;
+  konten: string;
+  fileUrl?: string;
+}) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Client error");
+
+  const { data, error } = await supabase
+    .from("lms_forum_topik")
+    .update({
+      judul: values.judul,
+      konten: values.konten,
+      file_url: values.fileUrl || null,
+    })
+    .eq("id", values.id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteLmsForumTopik(id: string) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Client error");
+
+  const { error } = await supabase
+    .from("lms_forum_topik")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+  return { success: true };
+}
+
+export async function deleteLmsForumKomentar(values: {
+  komentarId: string;
+  userId: string;
+  userRole: string;
+}) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Client error");
+
+  // Get comment details
+  const { data: komentar, error: fetchError } = await supabase
+    .from("lms_forum_komentar")
+    .select("user_id")
+    .eq("id", values.komentarId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!komentar) throw new Error("Komentar tidak ditemukan");
+
+  // Check permission: Mahasiswa can only delete their own, Dosen can delete any
+  const isOwner = komentar.user_id === values.userId;
+  const isDosen = values.userRole === "Dosen";
+  
+  if (!isOwner && !isDosen) {
+    throw new Error("Anda tidak memiliki akses untuk menghapus komentar ini");
+  }
+
+  // Soft delete by updating konten to indicate deletion
+  const { data, error } = await supabase
+    .from("lms_forum_komentar")
+    .update({
+      konten: `[Komentar ini dihapus oleh ${values.userRole === 'Dosen' ? 'Dosen' : 'Mahasiswa'}]`,
+    })
+    .eq("id", values.komentarId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateLmsForumKomentar(values: {
+  komentarId: string;
+  userId: string;
+  konten: string;
+  fileUrl?: string;
+}) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Client error");
+
+  // Get comment details to check ownership
+  const { data: komentar, error: fetchError } = await supabase
+    .from("lms_forum_komentar")
+    .select("user_id")
+    .eq("id", values.komentarId)
+    .single();
+
+  if (fetchError) throw fetchError;
+  if (!komentar) throw new Error("Komentar tidak ditemukan");
+
+  // Only owner can edit their comment
+  if (komentar.user_id !== values.userId) {
+    throw new Error("Anda hanya dapat mengedit komentar Anda sendiri");
+  }
+
+  // Update comment
+  const { data, error } = await supabase
+    .from("lms_forum_komentar")
+    .update({
+      konten: values.konten,
+      file_url: values.fileUrl || null,
+    })
+    .eq("id", values.komentarId)
     .select()
     .single();
 

@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 
-export function PageTransition({ children }: { children: React.ReactNode }) {
+export function PageTransition({ children, className }: { children: React.ReactNode; className?: string }) {
   const pathname = usePathname();
 
   return (
@@ -16,7 +16,7 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
         duration: 0.4, 
         ease: [0.22, 1, 0.36, 1] // Custom cubic-bezier for premium feel
       }}
-      className="w-full"
+      className={`w-full ${className || ""}`}
     >
       {children}
     </motion.div>

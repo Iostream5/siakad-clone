@@ -133,6 +133,68 @@ export async function createMasterBiayaAction(formData: FormData) {
   redirect(withToastParams(financeSetupPath, { variant: "success", title: "Tarif dibuat" }));
 }
 
+async function updateMasterBiayaRecord(id: string, payload: any, userId: string) {
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Supabase client not available");
+
+  const { error } = await supabase
+    .from("master_biaya")
+    .update({
+      ...payload,
+      updated_by: userId,
+    })
+    .eq("id", id)
+    .is("deleted_at", null);
+
+  if (error) throw error;
+}
+
+export async function updateMasterBiayaAction(formData: FormData) {
+  const user = await requireAuthorizedUser("keuangan.setup", ["Admin", "Keuangan"]);
+
+  const supabase = createAdminClient();
+  if (!supabase) throw new Error("Supabase client not available");
+  const actorUserId = await resolveExistingPublicUserId(supabase, user.id);
+
+  const id = getString(formData, "id");
+  if (!id) return redirect(withToastParams(financeSetupPath, { variant: "error", title: "ID Tarif tidak ditemukan" }));
+
+  const nama = getString(formData, "nama");
+  const nominal = Number(formData.get("nominal"));
+  const tahunAkademikId = getString(formData, "tahunAkademikId") || null;
+  const prodiId = getString(formData, "prodiId") || null;
+  const angkatan = formData.get("angkatan") ? Number(formData.get("angkatan")) : null;
+
+  // Advanced fields
+  const tingkatKelas = formData.getAll("tingkat_kelas").map(String).filter(Boolean);
+  const jurusan = formData.getAll("jurusan").map(String).filter(Boolean);
+  const jenisKelamin = getString(formData, "jenis_kelamin") || "Semua";
+  const gelombang = getString(formData, "gelombang") || null;
+  const jalur = getString(formData, "jalur") || null;
+  const terbit = getString(formData, "terbit") || "Sekali";
+  const bolehAngsur = formData.get("boleh_angsur") === "on";
+  const isActive = formData.get("status") === "on";
+
+  try {
+    const payload = {
+      nama, nominal, tahun_akademik_id: tahunAkademikId, prodi_id: prodiId, angkatan,
+      tingkat_kelas: tingkatKelas.length > 0 ? tingkatKelas : null,
+      jurusan: jurusan.length > 0 ? jurusan : null,
+      jenis_kelamin: jenisKelamin,
+      gelombang, jalur, terbit, boleh_angsur: bolehAngsur,
+      status: isActive,
+    };
+
+    await updateMasterBiayaRecord(id, payload, actorUserId || user.id);
+
+    revalidatePath("/dashboard/keuangan");
+    redirect(withToastParams(financeSetupPath, { variant: "success", title: "Master biaya berhasil diperbarui" }));
+  } catch (error) {
+    console.error("updateMasterBiayaAction error:", error);
+    redirect(withToastParams(financeSetupPath, { variant: "error", title: error instanceof Error ? error.message : "Gagal memperbarui master biaya" }));
+  }
+}
+
 export async function deleteMasterBiayaAction(formData: FormData) {
   const user = await requireAuthorizedUser("keuangan.setup", ["Admin", "Keuangan"]);
 

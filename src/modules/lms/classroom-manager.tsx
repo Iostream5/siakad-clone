@@ -13,7 +13,8 @@ import {
   Download,
   Plus,
   Paperclip,
-  GraduationCap
+  GraduationCap,
+  Pencil
 } from "lucide-react";
 import Link from "next/link";
 
@@ -25,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { AddMateriModal } from "./modals/add-materi-modal";
 import { AddTugasModal } from "./modals/add-tugas-modal";
 import { AddForumModal } from "./modals/add-forum-modal";
+import { DetailMateriModal } from "./modals/detail-materi-modal";
 import type { LmsParticipant } from "@/lib/admin/lms";
 
 interface ClassroomManagerProps {
@@ -89,18 +91,31 @@ export function ClassroomManager({
   const [isMateriModalOpen, setIsMateriModalOpen] = useState(false);
   const [isTugasModalOpen, setIsTugasModalOpen] = useState(false);
   const [isForumModalOpen, setIsForumModalOpen] = useState(false);
+  const [editingMateri, setEditingMateri] = useState<LmsMateri | null>(null);
+  const [viewingMateri, setViewingMateri] = useState<LmsMateri | null>(null);
   
   const canCreateForum = user.role === "Admin" || user.role === "Dosen" || user.role === "Mahasiswa";
   const showAddButton = activeTab === "forum" ? canCreateForum : canManage;
 
   function handleAddClick() {
     if (activeTab === "materi") {
+      setEditingMateri(null);
+      setViewingMateri(null);
       setIsMateriModalOpen(true);
     } else if (activeTab === "tugas") {
       setIsTugasModalOpen(true);
     } else if (activeTab === "forum") {
       setIsForumModalOpen(true);
     }
+  }
+
+  function handleEditMateri(item: LmsMateri) {
+    setEditingMateri(item);
+    setIsMateriModalOpen(true);
+  }
+
+  function handleViewMateri(item: LmsMateri) {
+    setViewingMateri(item);
   }
 
   return (
@@ -175,7 +190,7 @@ export function ClassroomManager({
                 <EmptyState icon={<FileText />} message="Belum ada materi kuliah yang diunggah." />
               ) : (
                 initialMateri.map((item) => (
-                  <MateriCard key={item.id} item={item} />
+                  <MateriCard key={item.id} item={item} onEdit={handleEditMateri} onView={handleViewMateri} userRole={user.role} />
                 ))
               )}
             </div>
@@ -233,10 +248,17 @@ export function ClassroomManager({
 
       <AddMateriModal 
         isOpen={isMateriModalOpen} 
-        onClose={() => setIsMateriModalOpen(false)} 
+        onClose={() => { setIsMateriModalOpen(false); setEditingMateri(null); }} 
         jadwalId={jadwal.id} 
+        editItem={editingMateri}
       />
       
+      <DetailMateriModal
+        isOpen={viewingMateri !== null}
+        onClose={() => setViewingMateri(null)}
+        item={viewingMateri}
+      />
+
       <AddTugasModal 
         isOpen={isTugasModalOpen} 
         onClose={() => setIsTugasModalOpen(false)} 
@@ -279,9 +301,13 @@ function TabTrigger({ value, icon, label }: { value: string, icon: ReactNode, la
   );
 }
 
-function MateriCard({ item }: { item: LmsMateri }) {
+function MateriCard({ item, onEdit, onView, userRole }: { item: LmsMateri, onEdit: (item: LmsMateri) => void, onView: (item: LmsMateri) => void, userRole: string }) {
+  const canEdit = userRole === "Dosen";
   return (
-    <Card className="p-5 border-slate-200 shadow-sm hover:border-emerald-200 transition-all rounded-2xl group">
+    <Card 
+      className="p-5 border-slate-200 shadow-sm hover:border-emerald-200 transition-all rounded-2xl group cursor-pointer"
+      onClick={() => onView(item)}
+    >
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-500 transition-colors border border-slate-100">
@@ -298,11 +324,22 @@ function MateriCard({ item }: { item: LmsMateri }) {
             </div>
           </div>
         </div>
-        {item.file_url ? (
-          <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center h-10 w-10 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors">
-            <Download className="h-5 w-5" />
-          </a>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {canEdit && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+              className="flex items-center justify-center h-10 w-10 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+              title="Edit Materi"
+            >
+              <Pencil className="h-5 w-5" />
+            </button>
+          )}
+          {item.file_url && (
+            <a href={item.file_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center justify-center h-10 w-10 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors">
+              <Download className="h-5 w-5" />
+            </a>
+          )}
+        </div>
       </div>
     </Card>
   );

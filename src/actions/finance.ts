@@ -48,13 +48,14 @@ const updateTagihanSchema = z.object({
 
 const importModeSchema = z.enum(["skip_existing", "update_unpaid"]);
 
-export async function requestFinancePaymentGatewayAction(tagihanId: string) {
+export async function requestFinancePaymentGatewayAction(tagihanId: string, amount?: number) {
   const user = await requireUser();
 
   try {
     const result = await requestFinancePaymentGateway({
       userId: user.id,
       tagihanId,
+      amount,
     });
 
     revalidatePath("/dashboard/keuangan");

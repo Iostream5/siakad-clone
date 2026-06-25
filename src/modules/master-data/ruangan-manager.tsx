@@ -63,7 +63,7 @@ export function RuanganManager({ gedungs, ruanganData }: any) {
                   <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Formulir Master Data</p>
                </div>
                {editingItem && (
-                 <Button variant="ghost" size="sm" onClick={resetForm} className="h-8 w-8 p-0 rounded-full hover:bg-slate-200">
+                 <Button variant="ghost" size="sm" onClick={resetForm} className="h-11 w-11 sm:h-8 sm:w-8 p-0 rounded-full hover:bg-slate-200">
                     <X className="h-4 w-4" />
                  </Button>
                )}
@@ -211,8 +211,8 @@ export function RuanganManager({ gedungs, ruanganData }: any) {
                                <TD><Badge variant={r.is_active ? "success" : "secondary"}>{r.is_active ? "Aktif" : "Nonaktif"}</Badge></TD>
                                <TD>
                                   <div className="flex gap-1">
-                                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-white hover:text-amber-600" onClick={() => setEditingItem({ ...r, type: "ruangan" })}><Pencil className="h-3.5 w-3.5" /></Button>
-                                     <form action={deleteRuanganAction}><input type="hidden" name="id" value={r.id} /><Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-rose-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></Button></form>
+                                     <Button variant="ghost" size="sm" className="h-11 w-11 sm:h-8 sm:w-8 p-0 hover:bg-white hover:text-amber-600" onClick={() => setEditingItem({ ...r, type: "ruangan" })}><Pencil className="h-3.5 w-3.5" /></Button>
+                                     <form action={deleteRuanganAction}><input type="hidden" name="id" value={r.id} /><Button variant="ghost" size="sm" className="h-11 w-11 sm:h-8 sm:w-8 p-0 text-rose-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></Button></form>
                                   </div>
                                </TD>
                             </TR>
@@ -241,8 +241,8 @@ export function RuanganManager({ gedungs, ruanganData }: any) {
                                <TD><Badge variant={g.is_active ? "success" : "secondary"}>{g.is_active ? "Aktif" : "Nonaktif"}</Badge></TD>
                                <TD>
                                   <div className="flex gap-1">
-                                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-white hover:text-amber-600" onClick={() => setEditingItem({ ...g, type: "gedung" })}><Pencil className="h-3.5 w-3.5" /></Button>
-                                     <form action={deleteGedungAction}><input type="hidden" name="id" value={g.id} /><Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-rose-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></Button></form>
+                                     <Button variant="ghost" size="sm" className="h-11 w-11 sm:h-8 sm:w-8 p-0 hover:bg-white hover:text-amber-600" onClick={() => setEditingItem({ ...g, type: "gedung" })}><Pencil className="h-3.5 w-3.5" /></Button>
+                                     <form action={deleteGedungAction}><input type="hidden" name="id" value={g.id} /><Button variant="ghost" size="sm" className="h-11 w-11 sm:h-8 sm:w-8 p-0 text-rose-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-3.5 w-3.5" /></Button></form>
                                   </div>
                                </TD>
                             </TR>
